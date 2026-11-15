@@ -16,6 +16,7 @@
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QPushButton>
+#include <QProgressBar>
 #include <QRegularExpression>
 #include <QScrollArea>
 #include <QTextDocument>
@@ -790,6 +791,27 @@ int main(int argc, char *argv[])
     dock.setBackgroundTaskActive(false);
     Require(stop->isEnabled(), "background completion must not disable Stop during an Agent turn");
     dock.setRunState(SigilAgent::AgentRunState::Completed);
+    QJsonObject task {{"session_id", "scope-1"}, {"state", "running"}, {"phase", "translate"},
+        {"paragraphs", 20}, {"scanned", 20}, {"written", 7}, {"reviewed", 0}, {"failed", 0},
+        {"phase_completed", 7}, {"phase_total", 20}, {"in_flight", 2}, {"queued_batches", 3}};
+    dock.setBackgroundTaskStatus(task);
+    auto *taskCard = dock.findChild<QWidget *>("agentBackgroundTask");
+    auto *progress = dock.findChild<QProgressBar *>("agentBackgroundProgress");
+    auto *pauseTask = dock.findChild<QPushButton *>("agentBackgroundPause");
+    auto *retryTask = dock.findChild<QPushButton *>("agentBackgroundRetry");
+    auto *counts = dock.findChild<QLabel *>("agentBackgroundTaskCounts");
+    Require(taskCard && !taskCard->isHidden() && progress && progress->maximum() == 20 && progress->value() == 7
+        && counts->text().contains("Written 7/20") && stop->isEnabled(), "native background task must expose actual progress without an Agent model call");
+    QString taskAction;
+    QObject::connect(&dock, &SigilAgent::AgentDock::backgroundTaskControlRequested, [&](const QString &action) { taskAction = action; });
+    pauseTask->click(); Require(taskAction == "pause", "task Pause control must route directly");
+    task["state"] = "paused"; dock.setBackgroundTaskStatus(task);
+    pauseTask->click(); Require(taskAction == "resume", "task Resume control must route directly");
+    task["state"] = "partial"; task["failed"] = 1; dock.setBackgroundTaskStatus(task);
+    Require(!retryTask->isHidden() && !stop->isEnabled(), "unfinished task must stay visible after the Agent run completes");
+    retryTask->click(); Require(taskAction == "retry_failed", "task retry must route directly");
+    dock.setBackgroundTaskStatus({});
+    Require(taskCard->isHidden() && !stop->isEnabled(), "clearing the conversation must remove its task data");
     dock.resetTranscript();
     SigilAgent::AgentEvent target_changed;
     target_changed.type = SigilAgent::AgentEventType::BookTargetChanged;

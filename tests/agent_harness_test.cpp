@@ -3,6 +3,7 @@
 
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QCoreApplication>
 #include <QJsonObject>
 #include <QSet>
 #include <QThread>
@@ -14,6 +15,7 @@
 #include "Agent/Execution/MemoryBookWorkspace.h"
 #include "Agent/Model/HistoryAssembler.h"
 #include "Agent/Model/MockModelProvider.h"
+#include "Agent/Model/ModelRetry.h"
 #include "Agent/Security/PermissionPolicy.h"
 #include "Agent/Tools/BookTools.h"
 #include "Agent/Tools/DivParagraphTools.h"
@@ -48,8 +50,9 @@ QStringList toolSchemaNames(const QJsonArray &schemas)
 
 } // namespace
 
-int main()
+int main(int argc, char **argv)
 {
+    QCoreApplication application(argc, argv);
     using namespace SigilAgent;
 
     const QString edit_system_prompt = PromptAssembler().systemPrompt(AgentMode::Edit);
@@ -759,7 +762,7 @@ int main()
     partial_tool_turn.usage.totalTokens = 46;
     partial_provider.addTurn(partial_tool_turn);
     ModelTurn partial_failure;
-    partial_failure.error = QStringLiteral("HTTP 503: retry later");
+    partial_failure.error = QStringLiteral("HTTP 401: access denied");
     partial_provider.addTurn(partial_failure);
     AgentRunner partial_runner(
         &partial_session, &partial_provider, &partial_registry, &partial_book,
@@ -1888,7 +1891,7 @@ int main()
             "the first cancellation cause must survive later stop requests");
 
     MemoryBookWorkspace controller_book = MemoryBookWorkspace::samplePhysicsBook();
-    for (const QString &failure : {QStringLiteral("HTTP error: Connection closed"), QStringLiteral("HTTP 503: unavailable"),
+    for (const QString &failure : {QStringLiteral("HTTP error: Connection closed"), QStringLiteral("HTTP 503: unavailable"), QStringLiteral("HTTP error: 连接已关闭"),
                                   QStringLiteral("HTTP 401: invalid key"), QStringLiteral("partial output")}) {
         AgentController transport;
         Require(transport.setWorkspace(&controller_book), "transport retry workspace");
@@ -1902,9 +1905,9 @@ int main()
         });
         transport.setProvider(std::move(provider));
         const auto outcome = transport.send("test empty transport retry", {});
-        const bool recoverable = failure.contains("Connection closed");
+        const bool recoverable = failure.contains("Connection closed") || failure.contains("连接已关闭") || failure.contains("503");
         Require(requests == (recoverable ? 2 : 1) && outcome.state == (recoverable ? AgentRunState::Completed : AgentRunState::Failed),
-            "only empty transient failures get one automatic retry");
+            "only empty transient failures retry without replaying partial output");
         Require(transport.session()->eventsOf(AgentEventType::UserMessage).size() == 1, "transport retry must not replay a user turn");
     }
     {
@@ -1912,8 +1915,35 @@ int main()
         auto provider = std::make_unique<MockModelProvider>(); int requests = 0;
         provider->setScript([&](const ModelRequest &) { ++requests; ModelTurn turn; turn.error = "HTTP error: Connection closed"; return turn; });
         transport.setProvider(std::move(provider));
-        Require(transport.send("persistent connection failure", {}).state == AgentRunState::Failed && requests == 2,
-            "empty transport retry is bounded to one extra attempt");
+        Require(transport.send("persistent connection failure", {}).state == AgentRunState::Failed && requests == 6,
+            "network retry is bounded to five extra attempts");
+    }
+    {
+        AgentController retry; retry.setWorkspace(&controller_book);
+        auto provider = std::make_unique<MockModelProvider>(); int attempts = 0;
+        provider->setScript([&](const ModelRequest &) {
+            ModelTurn turn; ++attempts;
+            if (attempts <= 5) { turn.error = "localized transport failure"; turn.retryableError = true; }
+            else turn.content = "recovered on the sixth request";
+            return turn;
+        });
+        retry.setProvider(std::move(provider));
+        Require(retry.send("recover five network faults", {}).state == AgentRunState::Completed && attempts == 6,
+            "five retries must permit recovery on the last allowed attempt");
+        const auto failures = retry.session()->eventsOf(AgentEventType::ModelRequestFailed);
+        Require(failures.size() == 5 && failures.last().payload.value("retry_attempt").toInt() == 5
+            && failures.last().payload.value("will_retry").toBool(), "retry attempts must be observable in events");
+    }
+    {
+        AgentController retry; retry.setWorkspace(&controller_book);
+        auto provider = std::make_unique<MockModelProvider>(); int attempts = 0;
+        provider->setScript([&](const ModelRequest &) { ++attempts; ModelTurn turn; turn.error = "HTTP 503: unavailable"; return turn; });
+        retry.setProvider(std::move(provider));
+        retry.session()->setListener([&](const AgentEvent &event) {
+            if (event.type == AgentEventType::ModelRequestFailed && event.payload.value("will_retry").toBool()) retry.stop();
+        });
+        Require(retry.send("cancel while reconnecting", {}).state == AgentRunState::Cancelled && attempts == 1,
+            "Stop during retry backoff must cancel without another request");
     }
     AgentController controller;
     Require(controller.setWorkspace(&controller_book),

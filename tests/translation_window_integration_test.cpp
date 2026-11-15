@@ -6,9 +6,11 @@
 #include <QElapsedTimer>
 #include <QFile>
 #include <QJsonDocument>
+#include <QLabel>
 #include <QEventLoop>
 #include <QFutureWatcher>
 #include <QPushButton>
+#include <QProgressBar>
 #include <QComboBox>
 #include <QSpinBox>
 #include <QDoubleSpinBox>
@@ -122,6 +124,10 @@ int main(int argc, char **argv)
                 if (text->GetRelativePath().endsWith("translation-glossary.json")) glossary = text;
             return !controller->running() && glossary && backgroundNotices > 0;
         }), "Agent did not finish its native translation and glossary follow-up");
+        auto *taskCard = dock->findChild<QWidget *>("agentBackgroundTask");
+        auto *taskCounts = dock->findChild<QLabel *>("agentBackgroundTaskCounts");
+        require(taskCard && !taskCard->isHidden() && taskCard->property("state") == "completed" && taskCounts
+            && taskCounts->text().contains("Written 224/224"), "Agent task card did not expose native workflow completion");
         const auto status = controller->status();
         require(status.value("paragraphs").toInt() > 100, "Fixture scope not fully read");
         require(status.value("translated").toInt() == status.value("paragraphs").toInt()
@@ -171,11 +177,15 @@ int main(int argc, char **argv)
         require(watcher, "Old conversation watcher missing");
         bool delivered = false;
         QObject::connect(watcher, &QFutureWatcherBase::finished, &window, [&]() { delivered = true; });
+        auto *pauseTask = dock->findChild<QPushButton *>("agentBackgroundPause");
+        require(pauseTask && !pauseTask->isHidden(), "Background task pause control missing");
+        pauseTask->click(); require(controller->status().value("state") == "paused", "Task Pause did not control the native queue");
+        pauseTask->click(); require(controller->status().value("state") == "running", "Task Resume did not control the native queue");
         const QString ownerB = controller->agentSessionId();
         require(fresh->isEnabled(), "Background translation locked New Session");
         fresh->click();
         require(controller->agentSessionId() != ownerB && controller->contextId().isEmpty()
-            && !controller->running(), "New Session did not synchronously discard old translation");
+            && !controller->running() && taskCard->isHidden(), "New Session did not synchronously discard old translation/task card");
         release.store(true); require(waitFor([&]() { return delivered; }), "Old conversation reply did not settle");
         require(resource->GetText() == unchanged && controller->contextId().isEmpty() && backgroundNotices == noticesAfterNewSession,
             "Late translation from old conversation wrote or notified the new conversation");

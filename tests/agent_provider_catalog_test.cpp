@@ -494,6 +494,7 @@ int main(int argc, char *argv[])
         { QStringLiteral("authorization"), QStringLiteral("Bearer sk-secretvalue999") },
         { QStringLiteral("request_body"), QStringLiteral("{\"model\":\"deepseek-chat\"}") }
     });
+    context.backgroundTasks.append(QJsonObject {{"phase", "review"}, {"written", 3139}, {"reviewed", 2793}, {"last_retry", "sk-secretvalue999"}});
     const QByteArray debug = exportDebugJson(session, context);
     Require(!debug.contains("sk-secretvalue999"), "debug log must redact API keys");
     Require(QString::fromUtf8(debug).contains(QStringLiteral("sigil-native-agent-debug-v1")),
@@ -507,6 +508,8 @@ int main(int argc, char *argv[])
     Require(QString::fromUtf8(debug).contains(QStringLiteral("http_traces")),
             "debug log must include HTTP traces");
     const QJsonObject debug_object = QJsonDocument::fromJson(debug).object();
+    Require(debug_object.value("background_tasks").toArray().size() == 1
+        && debug_object.value("background_tasks").toArray().first().toObject().value("written").toInt() == 3139, "debug export must retain redacted background-task state");
     Require(debug_object.value(QStringLiteral("assistant_delta_omitted")).toInt() >= 1,
             "debug log must report omitted per-token deltas");
     for (const QJsonValue &value : debug_object.value(QStringLiteral("events")).toArray()) {

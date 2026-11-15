@@ -11,6 +11,7 @@
 #include "Agent/Tools/ToolRegistry.h"
 #include "Agent/Security/PermissionPolicy.h"
 #include "Agent/Model/AgentProviderPreset.h"
+#include "Agent/Model/ModelRetry.h"
 #include "BuiltinPlugins/Translation/TranslationController.h"
 
 using namespace BuiltinPlugins::Translation;
@@ -246,6 +247,110 @@ int main(int argc, char **argv)
     require(rejected.prepare().ok && rejected.run({{"stages", QJsonArray {"translate"}}}).ok, "authentication failure run starts");
     require(waitFor([&]() { return !rejected.running(); }), "authentication failure stops workflow");
     require(rejectedCalls.load() == 1 && rejected.status().value("failed").toInt() == 1, "permanent errors do not fan out into retries");
+
+    auto retryBook = makeBook(1);
+    TranslationController network; network.setWorkspace(&retryBook); network.setConfigurationProvider(configuration);
+    std::atomic_int networkCalls {0};
+    network.setCompletion([&](const auto &, const auto &request, const auto &) {
+        if (++networkCalls <= 5) { ModelTurn turn; turn.error = "HTTP error: 连接已关闭"; turn.retryableError = true; return turn; }
+        return reply(request);
+    });
+    require(network.prepare().ok && network.run({{"stages", QJsonArray {"translate"}}}).ok
+        && waitFor([&]() { return !network.running(); }, 12000), "five network retries settle");
+    require(networkCalls == 6 && network.status().value("network_retries").toInt() == 5
+        && network.status().value("written").toInt() == 1, "last network retry recovers and writes once");
+    require(network.diagnostics().value("recent_requests").toArray().size() == 6, "bounded worker diagnostics retain retry and output metadata");
+    require(modelRetryDelay(1, 3000) >= 3000 && modelRetryDelay(5) <= 4000, "Retry-After and exponential backoff bounds");
+
+    auto scopeBook = makeBook(6);
+    TranslationController scope; scope.setWorkspace(&scopeBook); scope.setConfigurationProvider(configuration);
+    ToolRegistry scopedTools; registerTranslationTools(&scopedTools, &scope);
+    scope.setCompletion([](const auto &, const auto &request, const auto &) { return reply(request); });
+    require(scopedTools.find("translation.prepare")->execute({{"paragraph_offset", 1}, {"paragraph_limit", 3}}).ok
+        && scope.status().value("paragraphs").toInt() == 3, "prepare just a few reading paragraphs");
+    const auto rows = scopedTools.find("translation.status")->execute({{"include_paragraphs", true}, {"offset", 1}, {"limit", 1}});
+    require(rows.ok && rows.data.value("items").toArray().size() == 1
+        && rows.data.value("items").toArray().first().toObject().value("index").toInt() == 1, "status exposes bounded stable scope indexes");
+    require(!scope.run({{"stages", QJsonArray {}}}).ok && !scope.run({{"only_paragraphs", QJsonArray {9}}}).ok
+        && !scope.run({{"only_paragraphs", QJsonArray {}}}).ok, "invalid narrow requests must not silently run the whole book");
+    require(scopedTools.find("translation.run")->execute({{"stages", QJsonArray {"translate"}}, {"only_paragraphs", QJsonArray {1}}}).ok
+        && waitFor([&]() { return !scope.running(); }), "translate exactly one prepared paragraph");
+    require(scope.status().value("translated").toInt() == 1 && scope.status().value("scanned").toInt() == 0
+        && scope.status().value("reviewed").toInt() == 0, "small sample does not introduce scan/review work");
+    const int narrowRequests = scope.status().value("requests").toInt();
+    require(scope.control({{"action", "retry_failed"}}).ok && !scope.running() && scope.status().value("requests").toInt() == narrowRequests,
+        "retry must not expand a completed sample to untranslated paragraphs outside its requested scope");
+    const auto narrowResult = extract(scopeBook.resourceText("chapter"));
+    require(narrowResult.paragraphs.at(2).translation.size() > 0 && narrowResult.paragraphs.at(1).translation.isEmpty()
+        && narrowResult.paragraphs.at(3).translation.isEmpty(), "prepared index maps to the right original paragraph");
+
+    scope.setCompletion([](const auto &, const auto &, const auto &) { ModelTurn turn; turn.error = "fixture scan failure"; return turn; });
+    require(scope.run({{"stages", QJsonArray {"scan"}}}).ok && waitFor([&]() { return !scope.running(); })
+        && scope.status().value("failed").toInt() == 3, "fixture leaves earlier analysis incomplete");
+    scope.setCompletion([](const auto &, const auto &request, const auto &) { return reply(request); });
+    require(scope.run({{"stages", QJsonArray {"translate"}}, {"only_paragraphs", QJsonArray {0}}}).ok
+        && waitFor([&]() { return !scope.running(); }) && scope.status().value("state") == "completed"
+        && scope.status().value("failed").toInt() == 0 && scope.status().value("written").toInt() == 2,
+        "a new explicit sample must not inherit unrelated scan issues or expand its scope");
+    require(scope.control({{"action", "retry_failed"}}).ok && !scope.running(), "sample retry must not silently restart earlier analysis stages");
+
+    auto scanBook = makeBook(4);
+    TranslationController scanRetry; scanRetry.setWorkspace(&scanBook); scanRetry.setConfigurationProvider(configuration);
+    std::atomic_bool failScan {true}; std::atomic_int scanCount {0}, translateCount {0};
+    scanRetry.setCompletion([&](const auto &, const ModelRequest &request, const auto &) {
+        if (request.messages.first().content.contains(QStringLiteral("完整阅读本批"))) {
+            ++scanCount;
+            if (failScan) { ModelTurn turn; turn.error = "temporary fixture failure"; return turn; }
+        }
+        if (request.messages.first().content.contains(QStringLiteral("完整翻译每一"))) ++translateCount;
+        return reply(request);
+    });
+    require(scanRetry.prepare().ok && scanRetry.run({{"stages", QJsonArray {"scan", "aggregate", "translate"}}}).ok
+        && waitFor([&]() { return !scanRetry.running(); }), "partial scan workflow settles");
+    require(scanRetry.status().value("stage_failures").toObject().value("scan").toInt() == 4
+        && scanRetry.status().value("written").toInt() == 4, "successful translation must not erase scan failures or hide Book writes");
+    const int previousTranslateCount = translateCount;
+    failScan.store(false);
+    require(scanRetry.control({{"action", "retry_failed"}}).ok && waitFor([&]() { return !scanRetry.running(); })
+        && scanRetry.status().value("scanned").toInt() == 4 && translateCount == previousTranslateCount
+        && scanRetry.status().value("failed").toInt() == 0, "retry completes scan/aggregation without retranslating completed text");
+
+    auto truncatedBook = makeBook(10);
+    TranslationController truncated; truncated.setWorkspace(&truncatedBook); truncated.setConfigurationProvider(configuration);
+    std::atomic_int truncationCalls {0}, firstBudget {0}; std::atomic_bool biggerBudget {false};
+    truncated.setCompletion([&](const auto &, const ModelRequest &request, const auto &) {
+        if (++truncationCalls == 1) { firstBudget = request.maxOutputTokens; ModelTurn turn; turn.finishReason = "length"; return turn; }
+        if (request.maxOutputTokens > firstBudget) biggerBudget = true;
+        return reply(request);
+    });
+    require(truncated.prepare().ok && truncated.run({{"stages", QJsonArray {"scan"}}}).ok
+        && waitFor([&]() { return !truncated.running(); }) && biggerBudget && truncated.status().value("scanned").toInt() == 10,
+        "output truncation splits input and increases output reserve without network retry amplification");
+
+    auto formatBook = makeBook(1);
+    TranslationController ownFormat; ownFormat.setWorkspace(&formatBook); ownFormat.setConfigurationProvider(configuration);
+    ownFormat.setCompletion([](const auto &, const auto &request, const auto &) { return reply(request); });
+    ownFormat.setFormatHandler([&](const QJsonObject &) {
+        auto text = formatBook.resourceText("chapter"); text.replace(QStringLiteral("これは完全"), QStringLiteral("これは 完全"));
+        auto result = formatBook.beginTransaction("native formatting");
+        if (result.ok) result = formatBook.replaceText("chapter", text, formatBook.resourceRevision("chapter"));
+        if (result.ok) result = formatBook.commitTransaction(formatBook.revision());
+        return result;
+    });
+    require(ownFormat.prepare().ok && ownFormat.run({{"stages", QJsonArray {"translate", "format"}}}).ok
+        && waitFor([&]() { return !ownFormat.running(); }) && ownFormat.run({{"stages", QJsonArray {"review"}}}).ok
+        && waitFor([&]() { return !ownFormat.running(); }) && ownFormat.status().value("reviewed").toInt() == 1
+        && ownFormat.status().value("failed").toInt() == 0, "native format changes must refresh identities before later review");
+
+    ownFormat.setCompletion([](const auto &, const auto &, const auto &) { ModelTurn turn; turn.error = "fixture batch failure"; return turn; });
+    require(ownFormat.run({{"stages", QJsonArray {"translate"}}, {"retranslate", true}}).ok
+        && waitFor([&]() { return !ownFormat.running(); }) && ownFormat.status().value("failed").toInt() == 1
+        && ownFormat.status().value("written").toInt() == 1, "failed retranslation retains the existing Book translation");
+    const int beforeRetranslationRetry = ownFormat.status().value("requests").toInt();
+    ownFormat.setCompletion([](const auto &, const auto &request, const auto &) { return reply(request); });
+    require(ownFormat.control({{"action", "retry_failed"}}).ok && waitFor([&]() { return !ownFormat.running(); })
+        && ownFormat.status().value("failed").toInt() == 0 && ownFormat.status().value("requests").toInt() == beforeRetranslationRetry + 1,
+        "retry must redo failed retranslation even when the older translation still exists");
 
     auto sessionBook = makeBook(1);
     TranslationController isolated;

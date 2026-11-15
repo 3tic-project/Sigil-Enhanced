@@ -131,6 +131,10 @@ struct ModelTurn {
     QString error;
     ModelUsage usage;
     ModelResponseTiming timing;
+    int httpStatus = 0;
+    bool retryableError = false;
+    bool partialOutput = false;
+    int retryAfterMs = 0;
 };
 
 QString eventTypeName(AgentEventType type);

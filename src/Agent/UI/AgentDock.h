@@ -19,6 +19,7 @@ class QComboBox;
 class QButtonGroup;
 class QLabel;
 class QPlainTextEdit;
+class QProgressBar;
 class QPushButton;
 class QScrollArea;
 class QToolButton;
@@ -46,6 +47,7 @@ public:
     void setProviderConfiguration(const AgentProviderReadiness &readiness);
     void setRunState(AgentRunState state);
     void setBackgroundTaskActive(bool active);
+    void setBackgroundTaskStatus(const QJsonObject &status);
     void setBookContext(const QString &title,
                         const QString &fileName,
                         int resourceCount,
@@ -66,6 +68,7 @@ signals:
     void eventObserved(const SigilAgent::AgentEvent &event);
     void sendRequested(const QString &text, const QStringList &handles);
     void stopRequested();
+    void backgroundTaskControlRequested(const QString &action);
     void newSessionRequested();
     void exportConversationRequested();
     void exportDebugLogRequested();
@@ -151,6 +154,13 @@ private:
     QLabel *m_technicalDetails = nullptr;
     QLabel *m_composerHint = nullptr;
     QButtonGroup *m_scopeGroup = nullptr;
+    QWidget *m_backgroundTask = nullptr;
+    QLabel *m_backgroundTitle = nullptr;
+    QLabel *m_backgroundCounts = nullptr;
+    QLabel *m_backgroundDetail = nullptr;
+    QProgressBar *m_backgroundProgress = nullptr;
+    QPushButton *m_backgroundPause = nullptr;
+    QPushButton *m_backgroundRetry = nullptr;
     QPushButton *m_stopButton = nullptr;
     QPushButton *m_newSessionButton = nullptr;
     QPushButton *m_sendButton = nullptr;

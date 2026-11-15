@@ -29,6 +29,7 @@
 #include <QMenu>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QProgressBar>
 #include <QRegularExpression>
 #include <QScrollArea>
 #include <QScrollBar>
@@ -262,12 +263,51 @@ AgentDock::AgentDock(QWidget *parent) :
     m_sendButton = new QPushButton(tr("Send"), root);
     m_sendButton->setObjectName(QStringLiteral("agentSendButton"));
 
+    m_backgroundTask = new QFrame(root);
+    m_backgroundTask->setObjectName(QStringLiteral("agentBackgroundTask"));
+    auto *taskLayout = new QVBoxLayout(m_backgroundTask);
+    taskLayout->setContentsMargins(8, 6, 8, 6);
+    taskLayout->setSpacing(3);
+    auto *taskHeader = new QHBoxLayout;
+    m_backgroundTitle = new QLabel(m_backgroundTask);
+    m_backgroundTitle->setObjectName(QStringLiteral("agentBackgroundTaskTitle"));
+    m_backgroundTitle->setWordWrap(true);
+    m_backgroundPause = new QPushButton(tr("Pause"), m_backgroundTask);
+    m_backgroundPause->setObjectName(QStringLiteral("agentBackgroundPause"));
+    m_backgroundRetry = new QPushButton(tr("Retry unfinished"), m_backgroundTask);
+    m_backgroundRetry->setObjectName(QStringLiteral("agentBackgroundRetry"));
+    taskHeader->addWidget(m_backgroundTitle, 1);
+    taskHeader->addWidget(m_backgroundPause);
+    taskHeader->addWidget(m_backgroundRetry);
+    taskLayout->addLayout(taskHeader);
+    m_backgroundProgress = new QProgressBar(m_backgroundTask);
+    m_backgroundProgress->setObjectName(QStringLiteral("agentBackgroundProgress"));
+    taskLayout->addWidget(m_backgroundProgress);
+    m_backgroundCounts = new QLabel(m_backgroundTask);
+    m_backgroundCounts->setObjectName(QStringLiteral("agentBackgroundTaskCounts"));
+    m_backgroundCounts->setWordWrap(true);
+    m_backgroundCounts->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    taskLayout->addWidget(m_backgroundCounts);
+    m_backgroundDetail = new QLabel(m_backgroundTask);
+    m_backgroundDetail->setObjectName(QStringLiteral("agentBackgroundTaskDetail"));
+    m_backgroundDetail->setWordWrap(true);
+    m_backgroundDetail->setTextFormat(Qt::PlainText);
+    taskLayout->addWidget(m_backgroundDetail);
+    m_backgroundTask->hide();
+    connect(m_backgroundPause, &QPushButton::clicked, this, [this]() {
+        emit backgroundTaskControlRequested(m_backgroundPause->property("action").toString());
+    });
+    connect(m_backgroundRetry, &QPushButton::clicked, this, [this]() {
+        emit backgroundTaskControlRequested(QStringLiteral("retry_failed"));
+    });
+
     root_layout->addWidget(header);
     root_layout->addWidget(status);
     root_layout->addWidget(m_bookStatus);
     root_layout->addWidget(m_technicalDetailsToggle);
     root_layout->addWidget(m_technicalDetails);
     root_layout->addWidget(chips);
+    root_layout->addWidget(m_backgroundTask);
     root_layout->addWidget(m_transcript, 1);
     root_layout->addWidget(m_locationNotice);
     root_layout->addWidget(m_composer);
@@ -404,6 +444,52 @@ void AgentDock::setBackgroundTaskActive(bool active)
 {
     m_backgroundTaskActive = active;
     m_stopButton->setEnabled(m_runActive || active);
+}
+
+void AgentDock::setBackgroundTaskStatus(const QJsonObject &status)
+{
+    const QString state = status.value("state").toString();
+    const bool active = state == "running" || state == "paused";
+    setBackgroundTaskActive(active);
+    if (status.value("session_id").toString().isEmpty()) { m_backgroundTask->hide(); return; }
+    m_backgroundTask->show();
+    m_backgroundTask->setProperty("state", state);
+    const QString phase = status.value("phase").toString();
+    const QHash<QString, QString> names {{"scan", tr("Scanning")}, {"aggregate", tr("Organizing terminology")},
+        {"translate", tr("Translating")}, {"review", tr("Reviewing")}, {"format", tr("Formatting")},
+        {"ready", tr("Ready")}, {"running", tr("Starting")}, {"paused", tr("Paused")},
+        {"completed", tr("Completed")}, {"partial", tr("Needs attention")}, {"stopped", tr("Stopped")}};
+    const QString title = active && state != "paused" ? names.value(phase, names.value(state)) : names.value(state, state);
+    m_backgroundTitle->setText(tr("Book translation · %1").arg(title));
+    const int total = status.value("paragraphs").toInt();
+    m_backgroundCounts->setText(tr("Scanned %1/%2 · Written %3/%2 · Reviewed %4/%2 · Issues %5 · Incomplete stages %6")
+        .arg(status.value("scanned").toInt()).arg(total).arg(status.value("written").toInt())
+        .arg(status.value("reviewed").toInt()).arg(status.value("failed").toInt()).arg(status.value("failed_stages").toArray().size()));
+    const int phaseTotal = status.value("phase_total").toInt(total);
+    const bool measurable = phase == "scan" || phase == "translate" || phase == "review";
+    m_backgroundProgress->setFormat(measurable ? tr("%1: %v/%m").arg(names.value(phase)) : title);
+    if (state == "running" && !measurable) m_backgroundProgress->setRange(0, 0);
+    else {
+        m_backgroundProgress->setRange(0, qMax(1, phaseTotal));
+        m_backgroundProgress->setValue(state == "completed" ? qMax(1, phaseTotal) : status.value("phase_completed").toInt());
+    }
+    QString detail = tr("Active %1 · Queued %2 · Requests %3 · Retries %4")
+        .arg(status.value("in_flight").toInt()).arg(status.value("queued_batches").toInt())
+        .arg(status.value("requests").toInt()).arg(status.value("retries").toInt());
+    if (status.value("retry_wait_ms").toInteger() > 0) detail += tr(" · waiting to reconnect");
+    if (state == "partial") {
+        const auto messages = status.value("messages").toArray();
+        const auto problems = status.value("problems").toArray();
+        const QString message = !problems.isEmpty() ? problems.first().toObject().value("message").toString()
+            : !messages.isEmpty() ? messages.last().toString() : QString();
+        if (!message.isEmpty()) detail += QLatin1Char('\n') + message.left(240);
+    }
+    m_backgroundDetail->setText(detail);
+    m_backgroundDetail->setToolTip(status.value("last_retry").toString());
+    m_backgroundPause->setVisible(active);
+    m_backgroundPause->setText(state == "paused" ? tr("Resume") : tr("Pause"));
+    m_backgroundPause->setProperty("action", state == "paused" ? "resume" : "pause");
+    m_backgroundRetry->setVisible(!active && (state == "partial" || state == "stopped"));
 }
 
 void AgentDock::setBookContext(const QString &title,
@@ -1372,6 +1458,7 @@ void AgentDock::recordReviewedPlanPage(const QJsonObject &payload)
 
 void AgentDock::resetTranscript()
 {
+    setBackgroundTaskStatus({});
     discardAssistantDeltas();
     closePlanComparisons();
     m_streamRenderBatches = 0;
@@ -2281,9 +2368,16 @@ void AgentDock::appendEvent(const AgentEvent &event)
             m_providerRequestState = ProviderRequestState::Failed;
             m_providerFailure = providerFailureSummary(
                 event.payload.value(QStringLiteral("message")).toString());
-            m_retryAvailable = true;
+            m_retryAvailable = !event.payload.value("will_retry").toBool();
             captureRequestEvent(event, QStringLiteral("failed"));
             refreshProviderStatus();
+            if (event.payload.value("will_retry").toBool()) {
+                m_providerStatus->setText(tr("Reconnecting… %1/%2 · waiting %3 s")
+                    .arg(event.payload.value("retry_attempt").toInt())
+                    .arg(event.payload.value("retry_limit").toInt())
+                    .arg(event.payload.value("retry_delay_ms").toInt() / 1000.0, 0, 'f', 1));
+                m_providerStatus->show();
+            }
             refreshRetryState();
             break;
         case AgentEventType::ModelRequestCancelled:

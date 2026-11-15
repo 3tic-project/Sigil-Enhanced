@@ -485,6 +485,7 @@ QByteArray exportDebugJson(const AgentSession &session, const SessionExportConte
         { QStringLiteral("run_state"), context.runState },
         { QStringLiteral("provider"), provider },
         { QStringLiteral("http_traces"), redactJsonValue(context.httpTraces, context.secrets) },
+        { QStringLiteral("background_tasks"), redactJsonValue(context.backgroundTasks, context.secrets) },
         { QStringLiteral("event_counts"), counts },
         { QStringLiteral("assistant_delta_omitted"), omitted_deltas },
         { QStringLiteral("events"), events }

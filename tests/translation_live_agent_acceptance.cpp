@@ -16,6 +16,7 @@
 #include "Agent/Persistence/AgentSettings.h"
 #include "Agent/Persistence/AgentSessionExport.h"
 #include "Agent/UI/AgentDock.h"
+#include "Agent/Model/ModelRetry.h"
 #include "BookManipulation/Book.h"
 #include "BookManipulation/FolderKeeper.h"
 #include "BuiltinPlugins/Translation/TranslationController.h"
@@ -113,7 +114,7 @@ static QJsonObject scenario(const QString &source, const QString &name, bool fau
     });
     native->setCompletion([counters, fault](const OpenAIProviderConfig &config, const ModelRequest &request, const auto &cancel) {
         require(request.tools.isEmpty(), "Translation worker received tool schemas");
-        if (fault && request.messages.first().content.contains(QStringLiteral("完整翻译每一")) && counters->injected.load() < 3) {
+        if (fault && request.messages.first().content.contains(QStringLiteral("完整翻译每一")) && counters->injected.load() < MODEL_NETWORK_RETRIES + 1) {
             ++counters->injected; ModelTurn turn; turn.error = "HTTP 503: injected temporary outage in acceptance fixture"; return turn;
         }
         ++counters->requests; OpenAICompatibleProvider provider(config); Sink sink(cancel); return provider.stream(request, sink);
@@ -148,7 +149,7 @@ static QJsonObject scenario(const QString &source, const QString &name, bool fau
         require(count >= 10 && status.value("scanned").toInt() == count && status.value("translated").toInt() == count
             && status.value("reviewed").toInt() == count && status.value("failed").toInt() == 0, "Agent did not complete scan/translation/review scope");
         require(tools.contains("translation.save_glossary"), "Agent did not save the glossary using native tool");
-        if (fault) require(counters->injected.load() == 3 && recoveryActions > 0 && backgrounds >= 2,
+        if (fault) require(counters->injected.load() == MODEL_NETWORK_RETRIES + 1 && recoveryActions > 0 && backgrounds >= 2,
             "Agent did not yield and resume from the retry completion notice");
         result["initial_status"] = status;
         if (correction) {

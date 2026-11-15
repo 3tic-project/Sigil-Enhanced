@@ -66,6 +66,7 @@ private:
         void onContentDelta(const QString &text) override;
         void onToolCallsUpdated(const QList<ToolCall> &calls) override;
         bool isCancelled() const override;
+        bool sawOutput = false;
 
     private:
         AgentSession *m_session;

@@ -108,7 +108,15 @@ void MainWindow::CreateAgentTranslation()
         return Result::success({{"preset", chinese ? "chinese" : "preserve"}, {"fixed_layout_preserved", fixed.size()}}, modified);
     });
     connect(controller, &TranslationController::changed, this, [this, controller]() {
-        if (m_AgentDock) m_AgentDock->setBackgroundTaskActive(controller->running());
+        if (m_AgentDock) m_AgentDock->setBackgroundTaskStatus(controller->status());
+    });
+    connect(m_AgentDock, &SigilAgent::AgentDock::backgroundTaskControlRequested, this, [this, controller](const QString &action) {
+        if (controller->agentSessionId() != m_AgentController->session()->id()) return;
+        const auto result = controller->control({{"action", action}});
+        if (result.ok && action == "retry_failed" && controller->running()) {
+            m_TranslationAgentSession = controller->agentSessionId(); m_TranslationAgentContext = controller->contextId();
+            m_TranslationAgentContinuations = 0;
+        }
     });
     connect(controller, &TranslationController::bookModified, this, [this]() {
         m_Book->SetModified(true); m_BookBrowser->Refresh(); UpdateAgentContext();
@@ -156,7 +164,7 @@ void MainWindow::ContinueTranslationAgent()
     if (m_AgentController->isRunning()) { QTimer::singleShot(100, this, &MainWindow::ContinueTranslationAgent); return; }
     const auto notice = m_TranslationAgentNotice; m_TranslationAgentNotice = {};
     if (m_AgentController->cancellation()->isCancelled()) return;
-    const QString message = tr("后台翻译已结束。以下为宿主实际结果：%1\n请接续原用户目标：按需处理失败项（最多两次），仅在用户要求时保存词表，并报告实际完成/失败数量及书籍尚未保存。不要重新启动已完成的全书翻译。若启动补缺或校正，它会继续在后台执行；请简短说明已启动并结束本轮回复，等待下一条宿主完成通知，不要循环查询状态。")
+    const QString message = tr("后台翻译已结束。以下为宿主实际结果：%1\n请接续原用户目标：按需处理失败项（最多两次），仅在用户要求时保存词表，并报告实际完成/失败数量及书籍尚未保存。written/translated 表示已存在于书中的译文，reviewed 仅表示已校正，不能将未校正的译文说成未写入；stage_failures 区分扫描和校正问题。不要重新启动已完成的全书翻译。若启动补缺或校正，它会继续在后台执行；请简短说明已启动并结束本轮回复，等待下一条宿主完成通知，不要循环查询状态。")
         .arg(QString::fromUtf8(QJsonDocument(notice).toJson(QJsonDocument::Compact)));
     if (++m_TranslationAgentContinuations > 3) {
         m_AgentController->session()->append(SigilAgent::AgentEventType::AssistantMessage,

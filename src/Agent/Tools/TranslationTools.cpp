@@ -67,7 +67,7 @@ public:
             }
             if (info.name == "translation.prepare") result = controller->prepare(arguments);
             else if (info.name == "translation.run") result = controller->run(arguments);
-            else if (info.name == "translation.status") result = Controller::Result::success(controller->status());
+            else if (info.name == "translation.status") result = Controller::Result::success(controller->status(arguments));
             else if (info.name == "translation.control") result = controller->control(arguments);
             else if (info.name == "translation.context") result = controller->context(effective);
             else if (info.name == "translation.revise") result = controller->revise(arguments);
@@ -108,14 +108,17 @@ void registerTranslationTools(ToolRegistry *registry, Controller *controller, st
             writes ? ToolRisk::Bulk : ToolRisk::Read, writes, false};
         registry->add(std::move(tool));
     };
-    add("translation.prepare", "Prepare complete reading paragraphs from the live book, including unsaved text. Default whole spine; pass resource_ids for files and selection_start/end (UTF-16) for one file selection. No remote requests. Returns prepared-scope session_id and counts isolated to this Agent conversation. Reuse its existing context instead of repeatedly preparing.", false,
+    add("translation.prepare", "Prepare complete reading paragraphs from the live book, including unsaved text. Default whole spine; pass resource_ids for files and selection_start/end (UTF-16) for one file selection. Selection expands to whole reading paragraphs (reported explicitly). paragraph_offset/paragraph_limit prepare just a few paragraphs in reading order. No remote requests. Returns prepared-scope session_id and counts isolated to this Agent conversation. Reuse its existing context instead of repeatedly preparing.", false,
         {{"resource_ids", array()}, {"language", string()}, {"style", string()},
-         {"selection_start", QJsonObject {{"type", "integer"}}}, {"selection_end", QJsonObject {{"type", "integer"}}}});
-    add("translation.run", "Start this Agent conversation's native batch workflow: scan, aggregate, translate, review, format. OMIT stages for the complete workflow; preset:preserve changes formatting only. Full-book scan followed by translation needs the aggregate stage. Set stages only for an explicitly requested subset (sample: translate only). Returns immediately; host batches and applies all paragraphs as bilingual pairs. No per-sentence patches or HTML. Does not save EPUB.", true,
+         {"selection_start", QJsonObject {{"type", "integer"}}}, {"selection_end", QJsonObject {{"type", "integer"}}},
+         {"paragraph_offset", QJsonObject {{"type", "integer"}}}, {"paragraph_limit", QJsonObject {{"type", "integer"}}}});
+    add("translation.run", "Start this Agent conversation's native batch workflow: scan, aggregate, translate, review, format. OMIT stages for the complete workflow; preset:preserve changes formatting only. Stages can be freely composed in the requested order: scan only, scan+aggregate, translate only, review only, or format only. Use only_paragraphs with indexes from status(include_paragraphs:true) to process a subset without re-preparing. Scan+aggregate is recommended for a full-book translation. Returns immediately; host batches and applies all paragraphs as bilingual pairs. No per-sentence patches or HTML. Does not save EPUB.", true,
         {{"stages", QJsonObject {{"type", "array"}, {"items", enumeration({"scan", "aggregate", "translate", "review", "format"})}}},
-         {"preset", enumeration({"chinese", "preserve"})}, {"retranslate", QJsonObject {{"type", "boolean"}}}});
-    add("translation.status", "Read this Agent conversation's native translation progress, requests/usage, cache hits and failed locations. No model calls. Use when progress is requested; background completion notices resume the Agent, so do not busy-poll.", false, {});
-    add("translation.control", "Pause, resume, stop or retry missing translations in this Agent conversation. retry_failed starts a new ASYNCHRONOUS workflow and returns immediately. End the current reply after starting it; the host sends another background completion notice. Do not poll status in a loop. Stop rejects late model writes and keeps current Book edits. No restart persistence.", true,
+         {"preset", enumeration({"chinese", "preserve"})}, {"retranslate", QJsonObject {{"type", "boolean"}}},
+         {"only_paragraphs", QJsonObject {{"type", "array"}, {"items", QJsonObject {{"type", "integer"}}}}}});
+    add("translation.status", "Read this Agent conversation's native translation progress, requests/usage, cache hits and failed locations. No model calls. Use when progress is requested; background completion notices resume the Agent, so do not busy-poll. translated/written counts actual Book translations; reviewed counts completed checks, not whether text was written. Stage failures distinguish incomplete scan/review. include_paragraphs returns bounded scope indexes and excerpts.", false,
+        {{"include_paragraphs", QJsonObject {{"type", "boolean"}}}, {"offset", QJsonObject {{"type", "integer"}}}, {"limit", QJsonObject {{"type", "integer"}}}});
+    add("translation.control", "Pause, resume, stop or retry incomplete scan/aggregate/translation/review stages in this Agent conversation. retry_failed starts a new ASYNCHRONOUS workflow and returns immediately. End the current reply after starting it; the host sends another background completion notice. Do not poll status in a loop. Stop rejects late model writes and keeps current Book edits. No restart persistence.", true,
         {{"action", enumeration({"pause", "resume", "stop", "retry_failed"})}});
     add("translation.context", "Read/update temporary plan, memory or glossary isolated to this Agent conversation. For action:update use the typed field matching kind: glossary -> terms array, plan -> plan object, memory -> memory string. Prefer typed fields; legacy value also accepts complete JSON-encoded glossary/plan or plain memory. Read glossary pages with offset/limit. No remote calls or disk persistence.", false,
         {{"kind", enumeration({"plan", "memory", "glossary"})}, {"action", enumeration({"read", "update"})},

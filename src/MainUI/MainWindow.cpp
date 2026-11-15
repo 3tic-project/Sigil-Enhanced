@@ -6658,7 +6658,8 @@ void MainWindow::AgentExportConversationRequested()
 void MainWindow::AgentExportDebugLogRequested()
 {
     if (!m_AgentController) return;
-    const SigilAgent::SessionExportContext context = MakeAgentExportContext(m_AgentController.get(), m_AgentDock);
+    SigilAgent::SessionExportContext context = MakeAgentExportContext(m_AgentController.get(), m_AgentDock);
+    if (m_TranslationController && !m_TranslationController->contextId().isEmpty()) context.backgroundTasks.append(m_TranslationController->diagnostics());
     QString filter = tr("JSON (*.json);;All files (*)");
     const QString path = QFileDialog::getSaveFileName(
         this,

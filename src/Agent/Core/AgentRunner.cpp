@@ -15,6 +15,7 @@
 #include <QUuid>
 
 #include "Agent/Tools/BookTools.h"
+#include "Agent/Model/ModelRetry.h"
 
 namespace SigilAgent
 {
@@ -279,6 +280,7 @@ AgentRunner::SessionSink::SessionSink(AgentSession *session, AgentCancellation *
 void AgentRunner::SessionSink::onReasoningDelta(const QString &text)
 {
     if (!m_session || text.isEmpty()) return;
+    sawOutput = true;
     m_session->append(AgentEventType::AssistantDelta, QJsonObject {
         { QStringLiteral("kind"), QStringLiteral("reasoning") },
         { QStringLiteral("text"), text }
@@ -288,14 +290,16 @@ void AgentRunner::SessionSink::onReasoningDelta(const QString &text)
 void AgentRunner::SessionSink::onContentDelta(const QString &text)
 {
     if (!m_session || text.isEmpty()) return;
+    sawOutput = true;
     m_session->append(AgentEventType::AssistantDelta, QJsonObject {
         { QStringLiteral("kind"), QStringLiteral("content") },
         { QStringLiteral("text"), text }
     });
 }
 
-void AgentRunner::SessionSink::onToolCallsUpdated(const QList<ToolCall> &)
+void AgentRunner::SessionSink::onToolCallsUpdated(const QList<ToolCall> &calls)
 {
+    if (!calls.isEmpty()) sawOutput = true;
 }
 
 bool AgentRunner::SessionSink::isCancelled() const
@@ -955,14 +959,20 @@ AgentRunResult AgentRunner::runTurn(const QString &user_text, const QStringList 
                     QStringLiteral("response_timing"),
                     modelResponseTimingToJson(turn.timing));
             }
+            const bool retry = retryableModelError(turn) && !turn.partialOutput && !sink.sawOutput
+                && turn.content.isEmpty() && turn.reasoning.isEmpty() && turn.toolCalls.isEmpty()
+                && emptyTransportRetries < MODEL_NETWORK_RETRIES && steps < m_maxSteps;
+            const int delay = retry ? modelRetryDelay(emptyTransportRetries + 1, turn.retryAfterMs) : 0;
+            failed_payload["will_retry"] = retry;
+            failed_payload["retry_attempt"] = emptyTransportRetries + (retry ? 1 : 0);
+            failed_payload["retry_limit"] = MODEL_NETWORK_RETRIES;
+            failed_payload["retry_delay_ms"] = delay;
             m_session->append(AgentEventType::ModelRequestFailed, failed_payload);
-            const QString error = turn.error.toLower();
-            const bool temporaryTransport = error.contains(QStringLiteral("connection closed"))
-                || error.contains(QStringLiteral("connection reset"));
-            if (temporaryTransport && turn.content.isEmpty() && turn.reasoning.isEmpty() && turn.toolCalls.isEmpty()
-                && emptyTransportRetries == 0 && steps < m_maxSteps) {
+            if (retry) {
                 ++emptyTransportRetries;
-                continue; // No model output or tool effects to duplicate.
+                if (!waitForModelRetry(delay, [this]() { return m_cancellation && m_cancellation->isCancelled(); })) return cancelRun();
+                if (!bookTargetMatchesRun()) return failBookTargetChanged(QStringLiteral("network retry"));
+                continue;
             }
             m_session->append(AgentEventType::Error, QJsonObject {
                 { QStringLiteral("message"), turn.error }

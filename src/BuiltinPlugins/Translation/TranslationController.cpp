@@ -12,6 +12,7 @@
 #include <QUuid>
 #include <QtConcurrent/QtConcurrentRun>
 #include <algorithm>
+#include "Agent/Model/ModelRetry.h"
 
 namespace BuiltinPlugins::Translation {
 namespace {
@@ -84,11 +85,13 @@ void TranslationController::reset()
     m_assemblies.clear(); m_parsedResources.clear(); m_termMatches.clear(); m_parseHits = 0;
     m_termHits = 0; m_latencies.clear(); m_sectionMemory.clear(); m_successStreak = 0;
     m_errors.clear(); m_prepareErrors.clear(); m_resourceCounts.clear();
+    m_networkRetries = 0; m_lastRetry.clear(); m_recentRequests = {}; m_requestStats = {};
     m_cache.clear(); m_active = 0; m_stage = -1; m_state = QStringLiteral("idle"); m_phase.clear();
     m_requests = m_cacheHits = m_retries = m_unknownUsage = 0;
     m_inputTokens = m_outputTokens = m_cachedTokens = 0;
     m_requestBytes = 0; m_cooldownUntil = 0; m_runtimeConcurrency = 8;
     m_language = QStringLiteral("zh-Hans"); m_style = QStringLiteral("忠实通顺，保持人物口吻和日式引号");
+    m_failedStages.clear(); m_retryFailedOnly = false;
     m_stages.clear(); m_wholeBook = true; m_retranslate = false; m_targetCharacters = 3000;
     m_checkpoint = false; m_instruction.clear(); m_focusTerms.clear(); m_onlyParagraphs.clear(); m_advancePending = false; ++m_contextRevision;
     emit changed();
@@ -183,6 +186,18 @@ TranslationController::Result TranslationController::prepare(const QJsonObject &
             m_units.append({id, resource.value(QStringLiteral("book_path")).toString(), i, paragraph, false, false, {}});
         }
     }
+    const int offset = args.value("paragraph_offset").toInt(0);
+    const int limit = args.value("paragraph_limit").toInt(-1);
+    if (offset < 0 || (args.contains("paragraph_limit") && limit < 1)) return Result::error("INVALID_RANGE", tr("Use a nonnegative paragraph offset and positive limit"));
+    if (offset || limit > 0) {
+        m_units = m_units.mid(offset, limit);
+        m_wholeBook = false;
+    }
+    if (!m_wholeBook) {
+        QStringList scoped;
+        for (const auto &unit : m_units) if (!scoped.contains(unit.resource)) scoped.append(unit.resource);
+        m_resources = scoped;
+    }
     if (m_units.isEmpty()) { m_state = "idle"; emit changed(); return Result::error("NO_TEXT", tr("No translatable paragraphs in this range"), status()); }
     m_state = QStringLiteral("ready");
     m_prepareErrors = m_errors;
@@ -200,7 +215,9 @@ QList<BatchText> TranslationController::texts(const QString &phase) const
     for (int i = 0; i < m_units.size(); ++i) {
         if (!m_onlyParagraphs.isEmpty() && !m_onlyParagraphs.contains(i)) continue;
         const auto &unit = m_units.at(i);
-        if (phase == QLatin1String("translate") && !m_retranslate && !unit.paragraph.translation.isEmpty()) continue;
+        if (m_retryFailedOnly && ((phase == "scan" && unit.scanned) || (phase == "review" && unit.reviewed))) continue;
+        if (phase == QLatin1String("translate") && !m_retranslate && !unit.paragraph.translation.isEmpty()
+            && !(m_retryFailedOnly && unit.stageErrors.contains("translate"))) continue;
         if (phase == QLatin1String("review") && unit.paragraph.translation.isEmpty()) continue;
         if (phase == QLatin1String("review") && !m_focusTerms.isEmpty()) {
             if (matchingTerms(focus, unit.paragraph.text).isEmpty()) continue;
@@ -215,34 +232,50 @@ TranslationController::Result TranslationController::run(const QJsonObject &args
     if (!validContext(args)) return Result::error("NO_CONTEXT", tr("Prepare a range in the current book first"));
     if (m_units.isEmpty()) return Result::error("NO_TEXT", tr("No prepared reading paragraphs"));
     if (running()) return Result::error("TRANSLATION_RUNNING", tr("Translation already running"));
-    if (!m_configuration) return Result::error("NO_MODEL", tr("Configure the existing Agent connection first"));
-    const auto configuration = m_configuration();
-    m_stages = strings(args.value(QStringLiteral("stages")).toArray());
-    if (m_stages.isEmpty()) m_stages = {"scan", "aggregate", "translate", "review", "format"};
+    const auto configuration = m_configuration ? m_configuration() : RequestConfiguration {};
+    const QStringList requestedStages = strings(args.value("stages").toArray());
+    if (args.contains("stages") && requestedStages.isEmpty()) return Result::error("INVALID_STAGE", tr("Choose at least one stage; omit stages for the default workflow"));
+    QSet<int> selected;
+    for (const auto &value : args.value("only_paragraphs").toArray()) {
+        if (!value.isDouble() || value.toInt(-1) < 0 || value.toDouble() != value.toInt() || value.toInt() >= m_units.size())
+            return Result::error("INVALID_RANGE", tr("Paragraph indexes must come from this prepared scope"));
+        selected.insert(value.toInt());
+    }
+    if (args.contains("only_paragraphs") && selected.isEmpty()) return Result::error("INVALID_RANGE", tr("Select at least one prepared paragraph"));
+    QStringList stages = requestedStages;
+    if (stages.isEmpty()) stages = {"scan", "aggregate", "translate", "review", "format"};
     const QSet<QString> allowed {"scan", "aggregate", "translate", "review", "format"};
-    for (const auto &stage : m_stages) if (!allowed.contains(stage)) return Result::error("INVALID_STAGE", tr("Unknown translation stage"));
-    const bool analysis = m_stages.contains("scan") || m_stages.contains("aggregate") || (configuration.reviewWithAgent && m_stages.contains("review"));
-    const bool translation = m_stages.contains("translate") || m_stages.contains("review");
+    for (const auto &stage : stages) if (!allowed.contains(stage)) return Result::error("INVALID_STAGE", tr("Unknown translation stage"));
+    const bool analysis = stages.contains("scan") || stages.contains("aggregate") || (configuration.reviewWithAgent && stages.contains("review"));
+    const bool translation = stages.contains("translate") || (!configuration.reviewWithAgent && stages.contains("review"));
     const auto configured = [](const SigilAgent::OpenAIProviderConfig &config) {
         return !config.model.isEmpty() && !config.baseUrl.isEmpty() && !config.apiKey.isEmpty();
     };
     if ((analysis && !configured(configuration.agent)) || (translation && !configured(configuration.translator))) {
         return Result::error("NO_MODEL", tr("Configure the Agent connection, model and API key first"));
     }
+    m_stages = stages;
     m_retranslate = args.value(QStringLiteral("retranslate")).toBool();
-    m_runtimeConcurrency = qBound(1, configuration.concurrency, 8); m_cooldownUntil = 0;
-    m_targetCharacters = configuration.translationCharacters > 0 ? configuration.translationCharacters : 3000;
+    const bool retryOnly = args.value("retry_failed_only").toBool();
+    m_runtimeConcurrency = retryOnly ? qMin(m_runtimeConcurrency, qBound(1, configuration.concurrency, 8)) : qBound(1, configuration.concurrency, 8);
+    m_cooldownUntil = 0;
+    m_targetCharacters = configuration.translationCharacters > 0 ? configuration.translationCharacters : retryOnly ? m_targetCharacters : 3000;
     m_successStreak = 0;
     m_instruction = args.value(QStringLiteral("instruction")).toString().left(4000);
     m_focusTerms = strings(args.value(QStringLiteral("focus_terms")).toArray());
-    m_onlyParagraphs.clear();
-    for (const auto &index : args.value("only_paragraphs").toArray()) m_onlyParagraphs.insert(index.toInt());
+    m_onlyParagraphs = selected;
+    m_retryFailedOnly = args.value("retry_failed_only").toBool();
+    if (!m_retryFailedOnly) m_failedStages.clear();
     if (m_retranslate) m_cache.clear();
-    m_plan[QStringLiteral("preset")] = args.value(QStringLiteral("preset")).toString(m_wholeBook ? QStringLiteral("chinese") : QStringLiteral("preserve"));
+    m_plan[QStringLiteral("preset")] = args.value(QStringLiteral("preset")).toString(m_wholeBook && m_onlyParagraphs.isEmpty() ? QStringLiteral("chinese") : QStringLiteral("preserve"));
     m_plan[QStringLiteral("stages")] = QJsonArray::fromStringList(m_stages);
     m_cancel = std::make_shared<std::atomic_bool>(false); ++m_token;
+    m_phase.clear();
     m_stage = -1; m_active = 0; m_queue.clear(); m_errors = m_prepareErrors; m_state = "running"; m_advancePending = false;
-    for (auto &unit : m_units) unit.error.clear();
+    for (int i = 0; i < m_units.size(); ++i) {
+        if (!m_onlyParagraphs.isEmpty() && !m_onlyParagraphs.contains(i)) continue;
+        if (!m_retryFailedOnly) { m_units[i].stageErrors.clear(); m_units[i].error.clear(); }
+    }
     const auto token = m_token;
     QTimer::singleShot(0, this, [this, token]() { if (token == m_token) dispatch(); });
     emit changed();
@@ -256,19 +289,21 @@ void TranslationController::beginPhase()
     const auto phaseToken = m_token;
     ++m_stage;
     if (m_stage >= m_stages.size()) {
-        bool partial = !m_errors.isEmpty();
-        for (const auto &unit : m_units) partial = partial || !unit.error.isEmpty();
+        bool partial = !m_errors.isEmpty() || !m_failedStages.isEmpty();
+        for (int i = 0; i < m_units.size(); ++i)
+            if (m_onlyParagraphs.isEmpty() || m_onlyParagraphs.contains(i)) partial = partial || !m_units.at(i).error.isEmpty();
         m_state = partial ? "partial" : "completed"; emit changed();
         if (phaseToken == m_token) emit finished();
         return;
     }
     m_phase = m_stages.at(m_stage);
+    m_failedStages.remove(m_phase);
     m_assemblies.clear();
     if (m_phase == QLatin1String("scan")) { m_scanMemory.clear(); m_sectionMemory.clear(); }
     if (m_phase == QLatin1String("format")) {
         auto result = format({{"preset", m_plan.value("preset")}});
         if (phaseToken != m_token || !current()) return;
-        if (!result.ok) recordError(result.message);
+        if (!result.ok) { recordError(result.message); m_failedStages.insert(m_phase); }
         const auto token = m_token;
         QTimer::singleShot(0, this, [this, token]() { if (token == m_token) beginPhase(); }); return;
     }
@@ -294,10 +329,19 @@ void TranslationController::beginPhase()
         limits.maximumCharacters = qMin(limits.maximumCharacters, qMax(256, room));
         limits.targetCharacters = qMin(limits.targetCharacters, limits.maximumCharacters);
         QList<BatchText> items;
+        QHash<QString, TextResult> scopeDocuments;
         for (const auto &item : texts(m_phase)) {
+            auto &unit = m_units[item.paragraph];
+            if (!scopeDocuments.contains(unit.resource)) scopeDocuments.insert(unit.resource, parsedResource(unit.resource));
+            const auto &currentText = scopeDocuments[unit.resource];
+            if (!currentText.error.isEmpty() || currentText.paragraphs.size() != m_resourceCounts.value(unit.resource)
+                || currentText.paragraphs.at(unit.index).sourceKey != unit.paragraph.sourceKey
+                || currentText.paragraphs.at(unit.index).translation != unit.paragraph.translation) {
+                unit.fail(m_phase, tr("Source or translation changed; prepare this range again")); continue;
+            }
             const bool pair = m_phase == "review";
             const auto parts = splitParagraph(item, limits.maximumCharacters, pair);
-            if (parts.isEmpty()) { m_units[item.paragraph].error = tr("Paragraph has no safe sentence/word boundaries; preserving source"); continue; }
+            if (parts.isEmpty()) { m_units[item.paragraph].fail(m_phase, tr("Paragraph has no safe sentence/word boundaries; preserving source")); continue; }
             if (parts.size() > 1) {
                 Assembly assembly; assembly.items = parts; assembly.expectedTranslation = item.translation;
                 for (int i = 0; i < parts.size(); ++i) { assembly.results.append(QString()); assembly.complete.append(false); }
@@ -329,7 +373,18 @@ void TranslationController::dispatch()
     }
     while (!m_queue.isEmpty() && m_active < qMin(m_runtimeConcurrency, qBound(1, configuration.concurrency, 8))) {
         if (dispatchToken != m_token) return;
-        Work work = m_queue.takeFirst();
+        const qint64 now = QDateTime::currentMSecsSinceEpoch();
+        int ready = -1; qint64 next = 60000;
+        for (int i = 0; i < m_queue.size(); ++i) {
+            if (m_queue.at(i).readyAt <= now) { ready = i; break; }
+            next = qMin(next, m_queue.at(i).readyAt - now);
+        }
+        if (ready < 0) {
+            const auto token = m_token;
+            QTimer::singleShot(int(next), this, [this, token]() { if (token == m_token) dispatch(); });
+            break;
+        }
+        Work work = m_queue.takeAt(ready);
         work.token = m_token; work.contextRevision = m_contextRevision;
         for (auto &item : work.items) if (item.fragment < 0) item.translation = m_units.at(item.paragraph).paragraph.translation;
         const bool analysis = work.phase == QLatin1String("scan") || work.phase == QLatin1String("aggregate");
@@ -363,7 +418,9 @@ void TranslationController::dispatch()
         request.reasoningEffort = config.reasoningEffort; request.reasoningProtocol = config.reasoningProtocol;
         request.includeUsage = config.requestUsage; request.timeoutMs = config.firstTokenTimeoutMs;
         const qint64 window = qMax<qint64>(4096, useAgent ? configuration.agentContext : configuration.translatorContext);
-        request.maxOutputTokens = int(qMin<qint64>(work.phase == QLatin1String("scan") ? 4096 : 8192, window / 3));
+        const int usualOutput = work.phase == "scan" ? 4096 : 8192;
+        const int requestedOutput = qMax(work.outputLimit, request.thinking ? qMax(usualOutput, 12288) : usualOutput);
+        request.maxOutputTokens = int(qMin<qint64>(requestedOutput, window / 2));
         request.messages = {{"system", systemPrompt(work.phase, m_language, m_style)},
                             {"user", QString::fromUtf8(QJsonDocument(payload).toJson(QJsonDocument::Compact))}};
         const QByteArray wire = QJsonDocument(SigilAgent::OpenAICompatibleProvider::buildChatBody(request)).toJson(QJsonDocument::Compact);
@@ -383,6 +440,7 @@ void TranslationController::dispatch()
         }
         ++m_requests;
         work.startedAt = QDateTime::currentMSecsSinceEpoch(); work.maxOutputTokens = request.maxOutputTokens;
+        work.model = request.model; work.thinking = request.thinking; work.effort = request.reasoningEffort;
         m_requestBytes += wire.size();
         auto *watcher = new QFutureWatcher<SigilAgent::ModelTurn>(this);
         connect(watcher, &QFutureWatcher<SigilAgent::ModelTurn>::finished, this, [this, watcher, work]() {
@@ -429,6 +487,17 @@ void TranslationController::receive(Work work, SigilAgent::ModelTurn turn)
     m_latencies.append(qMax<qint64>(0, QDateTime::currentMSecsSinceEpoch() - work.startedAt));
     if (m_latencies.size() > 512) m_latencies.removeFirst();
     work.outputTokens = turn.usage.outputTokens;
+    m_recentRequests.append(QJsonObject {{"phase", work.phase}, {"items", work.items.size()},
+        {"model", work.model}, {"thinking", work.thinking}, {"reasoning_effort", work.effort},
+        {"max_output_tokens", work.maxOutputTokens}, {"output_tokens", turn.usage.outputTokens},
+        {"reasoning_tokens", turn.usage.reasoningTokens}, {"duration_ms", m_latencies.last()},
+        {"finish_reason", turn.finishReason}, {"http_status", turn.httpStatus}, {"error", turn.error.left(300)}});
+    if (m_recentRequests.size() > 32) m_recentRequests.removeFirst();
+    auto stats = m_requestStats.value(work.phase).toObject();
+    stats["requests"] = stats.value("requests").toInt() + 1;
+    if (turn.finishReason == "length") stats["truncated"] = stats.value("truncated").toInt() + 1;
+    if (SigilAgent::retryableModelError(turn)) stats["network_errors"] = stats.value("network_errors").toInt() + 1;
+    m_requestStats[work.phase] = stats;
     if (turn.usage.inputTokens < 0 || turn.usage.outputTokens < 0) ++m_unknownUsage;
     if (turn.usage.inputTokens >= 0) m_inputTokens += turn.usage.inputTokens;
     if (turn.usage.outputTokens >= 0) m_outputTokens += turn.usage.outputTokens;
@@ -439,17 +508,24 @@ void TranslationController::receive(Work work, SigilAgent::ModelTurn turn)
         if (lower.contains("context_length") || lower.contains("maximum context") || lower.contains("too many tokens")) {
             retry(work, turn.error, {}, true); return;
         }
-        static const QRegularExpression permanent(QStringLiteral("\\b(?:400|401|403|404)\\b"));
-        if (permanent.match(turn.error).hasMatch()) {
+        static const QRegularExpression permanent(QStringLiteral("^HTTP\\s+(?:400|401|403|404|422)\\b"));
+        if (turn.httpStatus == 400 || turn.httpStatus == 401 || turn.httpStatus == 403 || turn.httpStatus == 404 || turn.httpStatus == 422 || permanent.match(turn.error).hasMatch()) {
             work.retries = 2; retry(work, turn.error);
             m_queue.clear(); m_state = "stopped"; m_cancel->store(true); ++m_token; m_active = 0;
             const auto stoppedToken = m_token; emit changed();
             if (stoppedToken == m_token) emit finished();
             return;
         }
-        retry(work, turn.error); return;
+        const QString message = turn.httpStatus >= 400 && !turn.error.startsWith("HTTP ")
+            ? QStringLiteral("HTTP %1: %2").arg(turn.httpStatus).arg(turn.error) : turn.error;
+        retry(work, message, {}, false, SigilAgent::retryableModelError(turn), turn.retryAfterMs); return;
     }
-    if (turn.finishReason == QLatin1String("length")) { retry(work, tr("Model output truncated"), {}, true); return; }
+    if (turn.finishReason == QLatin1String("length")) {
+        const auto config = m_configuration();
+        const bool agent = work.phase == "scan" || work.phase == "aggregate" || (work.phase == "review" && config.reviewWithAgent);
+        work.outputLimit = int(qMin<qint64>(work.maxOutputTokens * 2, qMax<qint64>(4096, agent ? config.agentContext : config.translatorContext) / 2));
+        retry(work, tr("Model output truncated; reducing batch and reserving output space"), {}, true); return;
+    }
     auto parsed = parseBatch(work.phase, turn.content, work.items.size());
     if (!parsed.error.isEmpty()) { retry(work, parsed.error, {}, true); return; }
     if (work.contextRevision != m_contextRevision) { --m_active; m_queue.append(work); dispatch(); return; }
@@ -473,6 +549,7 @@ void TranslationController::accept(Work work, ParsedBatch parsed)
                     auto &assembly = m_assemblies[item.paragraph]; assembly.complete[item.fragment] = true;
                     m_units[item.paragraph].scanned = std::all_of(assembly.complete.begin(), assembly.complete.end(), [](bool done) { return done; });
                 }
+                if (m_units[item.paragraph].scanned) m_units[item.paragraph].clear("scan");
             }
             m_scanMemory.append(parsed.memory);
             QSet<QString> sections;
@@ -489,7 +566,7 @@ void TranslationController::accept(Work work, ParsedBatch parsed)
         if (work.phase == QLatin1String("review")) {
             for (int i = 0; i < work.items.size(); ++i) {
                 const auto &item = work.items.at(i);
-                if (item.fragment < 0 && !parsed.missing.contains(i) && m_units[item.paragraph].error.isEmpty()) m_units[item.paragraph].reviewed = true;
+                if (item.fragment < 0 && !parsed.missing.contains(i) && m_units[item.paragraph].stageErrors.value("review").isEmpty()) m_units[item.paragraph].reviewed = true;
             }
         }
     }
@@ -508,7 +585,7 @@ void TranslationController::accept(Work work, ParsedBatch parsed)
     QTimer::singleShot(0, this, [this]() { dispatch(); });
 }
 
-void TranslationController::retry(Work work, const QString &message, const QList<int> &missing, bool reduce)
+void TranslationController::retry(Work work, const QString &message, const QList<int> &missing, bool reduce, bool network, int retryAfterMs)
 {
     --m_active;
     m_successStreak = 0;
@@ -516,11 +593,20 @@ void TranslationController::retry(Work work, const QString &message, const QList
     QList<BatchText> pending;
     if (missing.isEmpty()) pending = work.items;
     else for (int i : missing) pending.append(work.items.at(i));
-    if (work.retries < 2 && m_state != QLatin1String("stopped")) {
-        ++m_retries; ++work.retries; work.items = pending;
+    if ((network ? work.networkRetries < SigilAgent::MODEL_NETWORK_RETRIES : work.retries < 2) && m_state != QLatin1String("stopped")) {
+        ++m_retries;
+        if (network) {
+            ++work.networkRetries; ++m_networkRetries;
+            work.readyAt = QDateTime::currentMSecsSinceEpoch() + SigilAgent::modelRetryDelay(work.networkRetries, retryAfterMs);
+            m_lastRetry = tr("Reconnecting %1/%2: %3").arg(work.networkRetries).arg(SigilAgent::MODEL_NETWORK_RETRIES).arg(message.left(200));
+        } else {
+            ++work.retries;
+            m_lastRetry = tr("Retrying smaller/failed batch %1/2: %2").arg(work.retries).arg(message.left(200));
+        }
+        work.items = pending;
         if (message.contains("429")) {
             m_runtimeConcurrency = qMax(1, m_runtimeConcurrency / 2);
-            m_cooldownUntil = QDateTime::currentMSecsSinceEpoch() + 1000 * work.retries;
+            m_cooldownUntil = QDateTime::currentMSecsSinceEpoch() + 1000 * qMax(work.retries, work.networkRetries);
         }
         if (reduce && pending.size() > 1 && missing.isEmpty()) {
             Work second = work;
@@ -539,13 +625,15 @@ void TranslationController::retry(Work work, const QString &message, const QList
         m_queue.prepend(work);
     } else {
         recordError(work.phase + QStringLiteral(": ") + message);
+        m_failedStages.insert(work.phase);
         for (const auto &item : pending) {
-            m_units[item.paragraph].error = message; m_units[item.paragraph].reviewed = false;
+            m_units[item.paragraph].fail(work.phase, message); m_units[item.paragraph].reviewed = false;
             if (item.fragment >= 0) m_assemblies[item.paragraph].error = message;
         }
     }
     emit changed();
-    QTimer::singleShot(work.retries > 0 ? 250 * work.retries : 0, this, [this]() { dispatch(); });
+    const auto token = m_token;
+    QTimer::singleShot(0, this, [this, token]() { if (token == m_token) dispatch(); });
 }
 
 void TranslationController::adjustBatches(int target)
@@ -599,17 +687,17 @@ TranslationController::Result TranslationController::apply(const Work &work, con
         auto &unit = m_units[item.paragraph];
         if (item.fragment >= 0 && m_assemblies.value(item.paragraph).applied) continue;
         if (item.fragment >= 0 && !m_assemblies.value(item.paragraph).error.isEmpty()) {
-            unit.error = m_assemblies.value(item.paragraph).error; continue;
+            unit.fail(work.phase, m_assemblies.value(item.paragraph).error); continue;
         }
         if (!observed.contains(unit.resource)) observed.insert(unit.resource, parsedResource(unit.resource));
         const auto &document = observed[unit.resource];
         if (!document.error.isEmpty() || document.paragraphs.size() != m_resourceCounts.value(unit.resource)
             || document.paragraphs.at(unit.index).sourceKey != unit.paragraph.sourceKey
             || document.paragraphs.at(unit.index).translation != (item.fragment < 0 ? item.translation : m_assemblies.value(item.paragraph).expectedTranslation)) {
-            unit.error = tr("Source or translation changed; preserving your edit");
+            unit.fail(work.phase, tr("Source or translation changed; preserving your edit"));
             if (item.fragment >= 0) m_assemblies[item.paragraph].error = unit.error;
             unit.reviewed = false;
-        } else { valid.insert(item.paragraph); unit.error.clear(); }
+        } else { valid.insert(item.paragraph); unit.clear(work.phase); }
     }
     QHash<int, QString> completeTexts;
     for (int i = 0; i < work.items.size(); ++i) {
@@ -644,14 +732,14 @@ TranslationController::Result TranslationController::apply(const Work &work, con
         const QString currentText = m_workspace->resourceText(it.key());
         const auto &currentParsed = observed[it.key()];
         if (!currentParsed.error.isEmpty() || currentParsed.paragraphs.size() != m_resourceCounts.value(it.key())) {
-            for (int global : globals.value(it.key())) m_units[global].error = tr("Source structure changed; prepare this resource again");
+            for (int global : globals.value(it.key())) m_units[global].fail(work.phase, tr("Source structure changed; prepare this resource again"));
             continue;
         }
         const auto result = writePairs(currentText, it.value(), m_language, &currentParsed, m_configuration().spacing);
         if (!result.error.isEmpty()) return Result::error("TRANSLATION_WRITE_FAILED", result.error);
         for (int global : globals.value(it.key())) {
             if (result.applied.contains(m_units.at(global).index)) successful.insert(global);
-            else m_units[global].error = tr("Source or translation changed; preserving your edit");
+            else m_units[global].fail(work.phase, tr("Source or translation changed; preserving your edit"));
         }
         if (!result.applied.isEmpty()) texts.insert(it.key(), result.text);
     }
@@ -659,15 +747,19 @@ TranslationController::Result TranslationController::apply(const Work &work, con
         const auto result = commitTexts(texts, tr("Batch bilingual translation"));
         if (!result.ok) return result;
         if (work.token != m_token || !current()) return Result::error("CONTEXT_CHANGED", tr("Translation session changed"));
+        QHash<QString, TextResult> written;
+        for (const auto &resource : texts.keys()) written.insert(resource, parsedResource(resource));
         for (auto it = completeTexts.begin(); it != completeTexts.end(); ++it) {
             const int global = it.key();
             if (!successful.contains(global)) continue;
             auto &unit = m_units[global];
-            unit.paragraph.translation = normalizedTranslation(unit.paragraph.text, it.value());
+            const auto &actual = written[unit.resource];
+            if (actual.error.isEmpty() && actual.paragraphs.size() == m_resourceCounts.value(unit.resource)) unit.paragraph = actual.paragraphs.at(unit.index);
+            else unit.paragraph.translation = normalizedTranslation(unit.paragraph.text, it.value());
             if (m_assemblies.contains(global)) m_assemblies[global].applied = true;
             if (work.phase == QLatin1String("translate")) unit.reviewed = false;
             else if (work.phase == QLatin1String("review")) unit.reviewed = true;
-            unit.error.clear();
+            unit.clear(work.phase);
         }
     }
     return Result::success({{"applied", successful.size()}}, !texts.isEmpty());
@@ -686,10 +778,27 @@ TranslationController::Result TranslationController::control(const QJsonObject &
         m_state = "running"; emit changed(); QTimer::singleShot(0, this, [this]() { dispatch(); }); return Result::success(status());
     }
     if (action == QLatin1String("retry_failed") && !running()) {
-        QJsonArray selected;
-        for (int i = 0; i < m_units.size(); ++i) if (!m_units.at(i).error.isEmpty() || m_units.at(i).paragraph.translation.isEmpty()) selected.append(i);
-        if (selected.isEmpty()) return Result::success(status());
-        return run({{"stages", QJsonArray {"translate", "review"}}, {"only_paragraphs", selected}});
+        QJsonArray selected, stages;
+        bool scan = false, translate = false, review = false;
+        for (int i = 0; i < m_units.size(); ++i) {
+            if (!m_onlyParagraphs.isEmpty() && !m_onlyParagraphs.contains(i)) continue;
+            const auto &unit = m_units.at(i);
+            const bool needsScan = m_stages.contains("scan") && !unit.scanned;
+            const bool needsTranslate = m_stages.contains("translate")
+                && (unit.paragraph.translation.isEmpty() || unit.stageErrors.contains("translate"));
+            const bool needsReview = m_stages.contains("review") && !unit.reviewed && !unit.paragraph.translation.isEmpty();
+            if (needsScan || needsTranslate || needsReview) selected.append(i);
+            scan |= needsScan; translate |= needsTranslate; review |= needsReview;
+        }
+        if (scan) stages.append("scan");
+        if (scan || (m_stages.contains("aggregate") && m_failedStages.contains("aggregate"))) stages.append("aggregate");
+        if (translate) stages.append("translate");
+        if (review || (translate && m_stages.contains("review"))) stages.append("review");
+        if (m_stages.contains("format") && m_failedStages.contains("format")) stages.append("format");
+        if (stages.isEmpty()) return Result::success(status());
+        QJsonObject options {{"stages", stages}, {"retry_failed_only", true}, {"preset", m_plan.value("preset")}};
+        if (!selected.isEmpty()) options["only_paragraphs"] = selected;
+        return run(options);
     }
     return Result::error("INVALID_ACTION", tr("Unknown/unavailable translation action"));
 }
@@ -787,14 +896,21 @@ TranslationController::Result TranslationController::format(const QJsonObject &a
     if (m_active > 0) return Result::error("TRANSLATION_RUNNING", tr("Wait for in-flight batches before formatting"));
     if (!m_format) return Result::error("FORMAT_UNAVAILABLE", tr("Book format conversion is available in the Sigil window"));
     auto options = args;
-    options["resource_ids"] = QJsonArray::fromStringList(m_resources);
-    options["whole_book"] = m_wholeBook;
+    QStringList scoped = m_resources;
+    if (!m_onlyParagraphs.isEmpty()) {
+        scoped.clear();
+        for (const int i : m_onlyParagraphs) if (!scoped.contains(m_units.at(i).resource)) scoped.append(m_units.at(i).resource);
+    }
+    options["resource_ids"] = QJsonArray::fromStringList(scoped);
+    options["whole_book"] = m_wholeBook && m_onlyParagraphs.isEmpty();
     if (!m_checkpoint) {
         const auto result = m_workspace->createCheckpoint(tr("Before translation formatting"));
         if (!result.ok) return result;
         if (token != m_token || !current()) return Result::error("CONTEXT_CHANGED", tr("Translation session changed"));
         m_checkpoint = true;
     }
+    QHash<QString, TextResult> before;
+    for (const auto &id : m_resources) before.insert(id, parsedResource(id));
     const auto result = m_format(options);
     if (token != m_token || !current()) return Result::error("CONTEXT_CHANGED", tr("Translation session changed"));
     if (result.ok) {
@@ -802,8 +918,10 @@ TranslationController::Result TranslationController::format(const QJsonObject &a
         for (const auto &id : m_resources) parsed.insert(id, extract(m_workspace->resourceText(id)));
         for (auto &unit : m_units) {
             const auto &document = parsed[unit.resource];
-            if (document.error.isEmpty() && unit.index < document.paragraphs.size()
-                && document.paragraphs.at(unit.index).text == unit.paragraph.text) unit.paragraph = document.paragraphs.at(unit.index);
+            const auto &prior = before[unit.resource];
+            if (document.error.isEmpty() && prior.error.isEmpty() && document.paragraphs.size() == prior.paragraphs.size()
+                && unit.index < document.paragraphs.size() && prior.paragraphs.at(unit.index).sourceKey == unit.paragraph.sourceKey
+                && prior.paragraphs.at(unit.index).translation == unit.paragraph.translation) unit.paragraph = document.paragraphs.at(unit.index);
         }
         m_cache.clear(); emit bookModified(); emit changed();
     }
@@ -845,24 +963,41 @@ TranslationController::Result TranslationController::saveGlossary(const QJsonObj
     return result;
 }
 
-QJsonObject TranslationController::status() const
+QJsonObject TranslationController::status(const QJsonObject &args) const
 {
     auto latencies = m_latencies; std::sort(latencies.begin(), latencies.end());
     const auto percentile = [&](int p) -> qint64 { return latencies.isEmpty() ? 0 : latencies.at((latencies.size() - 1) * p / 100); };
     int scanned = 0, translated = 0, reviewed = 0, failed = 0;
+    int selectedTotal = 0, phaseDone = 0;
     QJsonArray problems;
-    for (const auto &unit : m_units) {
+    QJsonObject stageFailures;
+    for (int i = 0; i < m_units.size(); ++i) {
+        const auto &unit = m_units.at(i);
+        const bool selected = m_onlyParagraphs.isEmpty() || m_onlyParagraphs.contains(i);
+        if (selected) {
+            ++selectedTotal;
+            phaseDone += m_phase == "scan" ? unit.scanned : m_phase == "review" ? unit.reviewed : !unit.paragraph.translation.isEmpty();
+        }
+        if (selected) for (auto it = unit.stageErrors.cbegin(); it != unit.stageErrors.cend(); ++it) stageFailures[it.key()] = stageFailures.value(it.key()).toInt() + 1;
         scanned += unit.scanned; translated += !unit.paragraph.translation.isEmpty(); reviewed += unit.reviewed;
-        if (!unit.error.isEmpty()) {
+        if (selected && !unit.error.isEmpty()) {
+            QJsonObject errors;
+            for (auto it = unit.stageErrors.cbegin(); it != unit.stageErrors.cend(); ++it) errors[it.key()] = it.value();
             ++failed;
             if (problems.size() < 20) problems.append(QJsonObject {{"resource_id", unit.resource}, {"book_path", unit.path},
-                {"line", unit.paragraph.line}, {"message", unit.error}});
+                {"line", unit.paragraph.line}, {"message", unit.error},
+                {"stage_errors", errors}});
         }
     }
-    return {{"session_id", m_id}, {"state", m_state}, {"phase", m_phase}, {"paragraphs", m_units.size()},
-        {"scanned", scanned}, {"translated", translated}, {"reviewed", reviewed}, {"failed", failed},
+    QJsonObject result {{"session_id", m_id}, {"state", m_state}, {"phase", m_phase}, {"paragraphs", m_units.size()},
+        {"scanned", scanned}, {"translated", translated}, {"written", translated}, {"reviewed", reviewed}, {"failed", failed},
+        {"stage_failures", stageFailures}, {"failed_stages", QJsonArray::fromStringList(m_failedStages.values())},
+        {"stages", QJsonArray::fromStringList(m_stages)},
+        {"selection_expands_to_paragraphs", true}, {"selected_paragraphs", selectedTotal},
+        {"phase_completed", phaseDone}, {"phase_total", selectedTotal},
         {"in_flight", m_active}, {"queued_batches", m_queue.size()}, {"terms", m_terms.size()},
         {"requests", m_requests}, {"local_cache_hits", m_cacheHits}, {"retries", m_retries},
+        {"network_retries", m_networkRetries}, {"last_retry", m_lastRetry},
         {"request_bytes", m_requestBytes}, {"effective_concurrency", m_runtimeConcurrency},
         {"resource_cache_hits", m_parseHits},
         {"term_cache_hits", m_termHits}, {"translation_target_characters", m_targetCharacters},
@@ -870,6 +1005,26 @@ QJsonObject TranslationController::status() const
         {"input_tokens", m_inputTokens}, {"output_tokens", m_outputTokens}, {"cached_input_tokens", m_cachedTokens},
         {"unknown_usage_requests", m_unknownUsage}, {"problems", problems}, {"messages", QJsonArray::fromStringList(m_errors)},
         {"epub_saved_by_translation", false}};
+    qint64 wait = 0;
+    for (const auto &work : m_queue) wait = qMax(wait, work.readyAt - QDateTime::currentMSecsSinceEpoch());
+    result["retry_wait_ms"] = qMax<qint64>(0, wait);
+    if (args.value("include_paragraphs").toBool()) {
+        QJsonArray rows;
+        const int offset = qMax(0, args.value("offset").toInt());
+        const int limit = qBound(1, args.value("limit").toInt(20), 100);
+        for (int i = offset; i < qMin(offset + limit, int(m_units.size())); ++i) {
+            const auto &unit = m_units.at(i);
+            rows.append(QJsonObject {{"index", i}, {"resource_id", unit.resource}, {"line", unit.paragraph.line},
+                {"source_excerpt", unit.paragraph.text.left(200)}, {"translated", !unit.paragraph.translation.isEmpty()}, {"reviewed", unit.reviewed}});
+        }
+        result["items"] = rows; result["next_offset"] = offset + rows.size();
+    }
+    return result;
+}
+
+QJsonObject TranslationController::diagnostics() const
+{
+    auto result = status(); result["recent_requests"] = m_recentRequests; result["request_stats"] = m_requestStats; return result;
 }
 
 } // namespace BuiltinPlugins::Translation

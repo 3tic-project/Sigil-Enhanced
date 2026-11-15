@@ -20,7 +20,11 @@ generate XHTML, or issue a patch per paragraph.
 
 1. Check translation.status for this conversation's existing context. Prepare once for the
    requested scope; omit resource_ids only for a whole-book request. A selection
-   uses one resource and its UTF-16 range, expanded to complete paragraphs.
+   uses one resource and its UTF-16 range, expanded to complete paragraphs. State
+   this expansion when a request selects only part of a paragraph; never claim
+   exact sentence selection. paragraph_offset/paragraph_limit can prepare a few
+   reading paragraphs. status(include_paragraphs:true,offset,limit) returns indexes;
+   run(only_paragraphs:[...]) narrows a prepared scope without another prepare.
 2. Keep a short temporary plan. Load any explicitly selected Misc glossary with
    existing resource tools and translation.context; do not read private paths
    or invent terminology. Imported user mappings take priority.
@@ -31,9 +35,11 @@ generate XHTML, or issue a patch per paragraph.
 3. Call translation.run. The default workflow scans ALL source batches, merges
    terms/short memory, translates, reviews and formats. For a short sample use
    stages:[translate], preset:preserve; do not scan/reformat the whole book.
-   For the complete whole-book request, omit stages so all five phases run;
-   preset:preserve retains the scan/aggregate/translate/review phases. Do not
-   hand-build a stages list that accidentally leaves out aggregate.
+   For a complete whole-book request, omitting stages is the recommended default.
+   User-directed workflows are flexible: scan only, scan+aggregate, translate only,
+   review only, format only, or another explicit ordered combination. Do not add
+   unrequested whole-book work to a sample. Empty stages is invalid. preserve
+   changes formatting only, not stage selection. A short sample can be one paragraph.
 4. The tool returns immediately and the Agent's native controller continues the work. Normal
    batches require no additional model turns or user confirmations. Do not
    poll in a loop or claim completion merely because the workflow started.
@@ -55,6 +61,10 @@ generate XHTML, or issue a patch per paragraph.
 6. Save the glossary to Misc when requested. Report actual translated/reviewed/
    failed counts and unsaved Book edits. The normal Sigil Save saves the EPUB.
    Request counts are cumulative across stages, not failed-attempt counts.
+   translated/written means translations exist in the actual Book; reviewed means
+   checked, not newly written. Report incomplete scan separately from incomplete
+   review. retry_failed retries incomplete stages, including scan/aggregate.
+   A compact task card in the Agent dock shows progress and direct controls.
    Keep the final report brief; omit session IDs and per-paragraph diagnostics
    unless asked.
 
