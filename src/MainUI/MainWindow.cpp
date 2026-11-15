@@ -120,7 +120,6 @@
 #include "BuiltinPlugins/Translation/TranslationController.h"
 #include "MainUI/TableOfContents.h"
 #include "MainUI/ValidationResultsView.h"
-#include "MainUI/SearchPanelDock.h"
 #include "Misc/HTMLSpellCheck.h"
 #include "Misc/HTMLSpellCheckML.h"
 #include "Misc/KeyboardShortcutManager.h"
@@ -2256,13 +2255,14 @@ void MainWindow::showEvent(QShowEvent *event)
         // Restore docks after the first show/resize has established the real
         // geometry. Activation events are not guaranteed during startup.
         QTimer::singleShot(0, this, [this]() {
+            // Search visibility has already been restored for the selected
+            // mode. Resolve its minimum size before fitting the saved docks.
+            centralWidget()->layout()->activate();
+            layout()->activate();
             if (!m_LastState.isEmpty()) {
                 restoreState(m_LastState);
                 m_LastState.clear();
             }
-            // Search visibility belongs to its selected mode, not the generic
-            // dock state (which older versions saved without this container).
-            static_cast<SearchPanelDock*>(findChild<QDockWidget*>("findreplacedock"))->syncVisibility();
         });
     }
 }
@@ -7559,14 +7559,12 @@ void MainWindow::ExtendUI()
     m_TabManager->setObjectName(TAB_MANAGER_NAME);
     m_FindReplace->setObjectName(FIND_REPLACE_NAME);
     layout->addWidget(m_TabManager);
+    layout->addWidget(m_FindReplace);
+    layout->addWidget(m_FindReplacePlus);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(1);
     frame->setObjectName(FRAME_NAME);
     setCentralWidget(frame);
-    auto* search_dock = new SearchPanelDock(m_FindReplace, m_FindReplacePlus, this);
-    addDockWidget(Qt::BottomDockWidgetArea, search_dock);
-    setCorner(Qt::BottomLeftCorner, Qt::BottomDockWidgetArea);
-    setCorner(Qt::BottomRightCorner, Qt::BottomDockWidgetArea);
     m_BookBrowser = new BookBrowser(this);
     m_BookBrowser->setObjectName(BOOK_BROWSER_NAME);
     addDockWidget(Qt::LeftDockWidgetArea, m_BookBrowser);

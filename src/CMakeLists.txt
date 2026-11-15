@@ -854,7 +854,6 @@ set( MAINUI_FILES
     MainUI/MainWindowTranslation.cpp
     MainUI/MainWindowExt.cpp
     MainUI/MainWindow.h
-    MainUI/SearchPanelDock.h
     MainUI/SearchBatchCoordinator.cpp
     MainUI/SearchBatchCoordinator.h
     MainUI/RegexWorkbenchBatchCommitter.cpp

@@ -9,10 +9,8 @@ on:
       - 'src/Misc/WindowStartupPolicy.h'
       - 'src/MainUI/FindReplace*'
       - 'src/MainUI/MainWindow.cpp'
-      - 'src/MainUI/SearchPanelDock.h'
       - 'tests/settings_concurrency_test.cpp'
       - 'tests/window_startup_policy_test.cpp'
-      - 'tests/search_panel_layout_test.cpp'
       - 'tests/settings_probe/**'
   workflow_dispatch:
 
@@ -69,7 +67,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           foreach ($scale in @('1', '1.5', '2')) {
             $env:QT_SCALE_FACTOR = $scale
-            Write-Host "Checking Windows title bars and search layout with QT_SCALE_FACTOR=$scale"
-            ctest --test-dir .ci-build/settings --output-on-failure -R '^(window_startup_policy|search_panel_layout)$'
+            Write-Host "Checking the native Windows title region with QT_SCALE_FACTOR=$scale"
+            ctest --test-dir .ci-build/settings --output-on-failure -R '^window_startup_policy$'
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }

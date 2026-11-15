@@ -240,6 +240,14 @@ int main(int argc, char** argv)
             require(original && enhanced, "Cannot find both real search panels");
             QWidget* active = scenario.endsWith("plus") ? static_cast<QWidget*>(enhanced) : original;
             QWidget* inactive = active == original ? static_cast<QWidget*>(enhanced) : original;
+            const auto checkSearchPosition = [&]() {
+                require(active->parentWidget() == window->centralWidget() &&
+                        tabs->parentWidget() == window->centralWidget(),
+                        "Search must stay in the editor column");
+                require(active->geometry().top() >= tabs->geometry().bottom() &&
+                        active->width() == tabs->width(),
+                        "Search moved away from its original position below the editor");
+            };
             if (scenario.startsWith("search-write-")) {
                 window->showNormal();
                 window->setGeometry(window->screen()->availableGeometry().adjusted(30, 40, -30, -40));
@@ -253,12 +261,17 @@ int main(int argc, char** argv)
                 settle();
                 window->resizeDocks({browser, preview}, {260, 1100}, Qt::Horizontal);
                 settle();
-                const int browser_width = browser->width(), preview_width = preview->width();
                 require(QMetaObject::invokeMethod(window.get(), "Find", Qt::DirectConnection), "Cannot open search");
                 settle();
                 require(active->isVisible() && inactive->isHidden(), "Find did not open only the active search panel");
-                require(qAbs(browser->width() - browser_width) <= 1 && qAbs(preview->width() - preview_width) <= 1,
-                        "Opening search resized the Book Browser or Preview");
+                checkSearchPosition();
+                // Keep the original editor column. With search open, give it
+                // enough width for the real controls before saving a wide Preview.
+                window->resizeDocks({browser, preview}, {260, 900}, Qt::Horizontal);
+                settle();
+                const int browser_width = browser->width(), preview_width = preview->width();
+                require(browser_width >= 240 && preview_width >= 850,
+                        "The saved layout fixture already compressed a side panel");
                 for (int toggle = 0; toggle < 3; ++toggle) {
                     if (active == original) original->HideFindReplace(); else enhanced->HideFindReplace();
                     settle();
@@ -267,6 +280,9 @@ int main(int argc, char** argv)
                             "Closing search changed the side panel widths");
                     require(QMetaObject::invokeMethod(window.get(), "Find", Qt::DirectConnection), "Cannot reopen search");
                     settle();
+                    checkSearchPosition();
+                    require(qAbs(browser->width() - browser_width) <= 1 && qAbs(preview->width() - preview_width) <= 1,
+                            "Reopening search changed a fitting layout's side panel widths");
                 }
                 settings.setValue("windowLayoutTest/browserWidth", browser->width());
                 settings.setValue("windowLayoutTest/previewWidth", preview->width());
@@ -278,6 +294,7 @@ int main(int argc, char** argv)
                 settings.sync();
             } else {
                 require(active->isVisible() && inactive->isHidden(), "Startup restored the wrong search panel visibility");
+                checkSearchPosition();
                 require(qAbs(browser->width() - settings.value("windowLayoutTest/browserWidth").toInt()) <= 5,
                         "Reopening with search and a wide Preview squeezed the Book Browser");
                 require(qAbs(preview->width() - settings.value("windowLayoutTest/previewWidth").toInt()) <= 5,
