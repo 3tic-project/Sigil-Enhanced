@@ -39,6 +39,9 @@ ContentTab::ContentTab(Resource *resource, QWidget *parent)
     connect(resource, SIGNAL(Renamed(const Resource *, QString)), this, SLOT(EmitTabRenamed()));
     connect(resource, SIGNAL(Moved(const Resource *, QString)), this, SLOT(EmitTabRenamed()));
     connect(resource, SIGNAL(TellTabUpdateName(const Resource *, QString)), this, SLOT(EmitTabRenamed()));
+    // Direct destruction (including a failed file removal during book
+    // teardown) does not necessarily send Deleted().
+    connect(resource, &QObject::destroyed, this, &ContentTab::UnderlyingResourceDeleted);
     m_Layout->setContentsMargins(0, 0, 0, 0);
     setLayout(m_Layout);
 }
@@ -51,25 +54,25 @@ ContentTab::~ContentTab()
 
 QString ContentTab::GetFilename()
 {
-    return m_Resource->Filename();
+    return m_Resource ? m_Resource->Filename() : QString();
 }
 
 
 QString ContentTab::GetShortPathName()
 {
-    return m_Resource->ShortPathName();
+    return m_Resource ? m_Resource->ShortPathName() : QString();
 }
 
 
 QIcon ContentTab::GetIcon()
 {
-    return m_Resource->Icon();
+    return m_Resource ? m_Resource->Icon() : QIcon();
 }
 
 
 Resource *ContentTab::GetLoadedResource()
 {
-    return m_Resource;
+    return m_Resource.data();
 }
 
 
@@ -81,7 +84,7 @@ Searchable *ContentTab::GetSearchableContent()
 
 void ContentTab::Close()
 {
-    SaveTabContent();
+    if (!GetResourceWasDeleted()) SaveTabContent();
     EmitDeleteMe();
 }
 
@@ -120,11 +123,12 @@ void ContentTab::ChangeCasing(const Utility::Casing casing)
 
 bool ContentTab::GetResourceWasDeleted()
 {  
-    return m_resource_was_deleted;
+    return m_resource_was_deleted || m_Resource.isNull();
 }
 
 void ContentTab::UnderlyingResourceDeleted()
 {
+      if (m_resource_was_deleted) return;
       m_resource_was_deleted = true;
       EmitDeleteMe();
 }
@@ -151,5 +155,5 @@ void ContentTab::focusInEvent(QFocusEvent *event)
 void ContentTab::focusOutEvent(QFocusEvent *event)
 {
     QWidget::focusOutEvent(event);
-    SaveTabContent();
+    if (!GetResourceWasDeleted()) SaveTabContent();
 }

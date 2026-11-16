@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import pathlib
+import re
 import sys
 
 
@@ -15,9 +16,14 @@ if clear_editor >= delete_editor:
     raise AssertionError("FlowTab must clear its editor pointer before deleting the editor")
 
 resource_modified = flow_tab[flow_tab.index("void FlowTab::ResourceModified()") : flow_tab.index("void FlowTab::HandleViewImage")]
-null_guard = resource_modified.index("if (!m_wCodeView)")
+null_guard = re.search(
+    r"if\s*\([^;{}]*!m_wCodeView[^;{}]*\)\s*\{\s*return;\s*\}",
+    resource_modified,
+)
+if null_guard is None:
+    raise AssertionError("ResourceModified must return when its editor is unavailable")
 caret_update = resource_modified.index("m_wCodeView->ExecuteCaretUpdate")
-if null_guard >= caret_update:
+if null_guard.start() >= caret_update:
     raise AssertionError("ResourceModified must reject teardown re-entry before editor access")
 
 code_destructor = code_view[code_view.index("CodeViewEditor::~CodeViewEditor()") : code_view.index("QString CodeViewEditor::cursor_selected_text")]

@@ -619,7 +619,7 @@ void FindReplacePlus::ChooseReplacements()
 // replacement text in the entire document.
 int FindReplacePlus::ReplaceAll()
 {
-    m_MainWindow->GetCurrentContentTab()->SaveTabContent();
+    if (ContentTab *tab = m_MainWindow->GetCurrentContentTab()) tab->SaveTabContent();
     clearMessage();
 
     if (IsNewSearch()) {
@@ -662,7 +662,7 @@ int FindReplacePlus::ReplaceAll()
     if (count > 0) {
         // Signal that the contents have changed and update the view
         m_MainWindow->GetCurrentBook()->SetModified(true);
-        m_MainWindow->GetCurrentContentTab()->ContentChangedExternally();
+        if (ContentTab *tab = m_MainWindow->GetCurrentContentTab()) tab->ContentChangedExternally();
     }
 
     UpdatePreviousPreFindStrings();
@@ -921,7 +921,7 @@ QList<Resource*> FindReplacePlus::GetAllResourcesToSearch()
     QList<Resource *> resources;
 
     if (isWhereCF() || m_LookWhereCurrentFile) {
-        resources << GetCurrentResource();
+        if (Resource *resource = GetCurrentResource()) resources << resource;
     } else {
         resources = GetFilesToSearch(true);
     }
@@ -953,7 +953,7 @@ QList <Resource *> FindReplacePlus::GetFilesToSearch(bool force_all)
 
     switch (lookwhere) {
     case FindReplacePlus::LookWhere_CurrentFile:
-        all_resources << GetCurrentResource();
+        if (Resource *resource = GetCurrentResource()) all_resources << resource;
         break;
     case FindReplacePlus::LookWhere_AllHTMLFiles:
         all_resources = m_MainWindow->GetAllHTMLResources();
@@ -977,7 +977,7 @@ QList <Resource *> FindReplacePlus::GetFilesToSearch(bool force_all)
 
 int FindReplacePlus::CountInFiles()
 {
-    m_MainWindow->GetCurrentContentTab()->SaveTabContent();
+    if (ContentTab *tab = m_MainWindow->GetCurrentContentTab()) tab->SaveTabContent();
 
     QList<Resource *>search_files = GetFilesToSearch(true);
     if (search_files.isEmpty()) return 0;
@@ -997,7 +997,7 @@ int FindReplacePlus::CountInFiles()
 
 int FindReplacePlus::ReplaceInAllFiles()
 {
-    m_MainWindow->GetCurrentContentTab()->SaveTabContent();
+    if (ContentTab *tab = m_MainWindow->GetCurrentContentTab()) tab->SaveTabContent();
     QList<Resource *>search_files = GetFilesToSearch(true);
     if (search_files.isEmpty()) return 0;
 
@@ -1091,16 +1091,16 @@ Resource* FindReplacePlus::GetNextContainingResource(Direction direction)
     bool need_to_check_assigned_starting_resource = false;
 
     // if CurrentFile is the same type as LookWhere, set it as the starting resource
-    if (isWhereHTML() && (current_resource->Type() == Resource::HTMLResourceType)) {
+    if (current_resource && isWhereHTML() && (current_resource->Type() == Resource::HTMLResourceType)) {
         starting_resource = current_resource;
     }
-    else if (isWhereCSS() && (current_resource->Type() == Resource::CSSResourceType)) {
+    else if (current_resource && isWhereCSS() && (current_resource->Type() == Resource::CSSResourceType)) {
         starting_resource = current_resource;
     }
-    else if (isWhereOPF() && (current_resource->Type() == Resource::OPFResourceType)) {
+    else if (current_resource && isWhereOPF() && (current_resource->Type() == Resource::OPFResourceType)) {
         starting_resource = current_resource;
     }
-    else if (isWhereNCX() && (current_resource->Type() == Resource::NCXResourceType)) {
+    else if (current_resource && isWhereNCX() && (current_resource->Type() == Resource::NCXResourceType)) {
         starting_resource = current_resource;
     }
     else if (isWhereSelected()) {
@@ -1541,7 +1541,8 @@ void FindReplacePlus::WriteSettings()
 
 Searchable *FindReplacePlus::GetAvailableSearchable()
 {
-    Searchable *searchable = m_MainWindow->GetCurrentContentTab()->GetSearchableContent();
+    ContentTab *tab = m_MainWindow->GetCurrentContentTab();
+    Searchable *searchable = tab ? tab->GetSearchableContent() : nullptr;
     if (!searchable) {
         ShowMessage(tr("This tab cannot be searched"));
     }
@@ -1600,7 +1601,8 @@ void FindReplacePlus::LoadSearch(SearchEditorModelPlus::searchEntry *search_entr
 
 int FindReplacePlus::GetStartingPos()
 {
-    int origin_cursor_pos = m_MainWindow->GetCurrentContentTab()->GetCursorPosition();
+    ContentTab *tab = m_MainWindow->GetCurrentContentTab();
+    int origin_cursor_pos = tab ? tab->GetCursorPosition() : 0;
     return SearchOperations::GetSuitableStartPos(GetPreSearchRegex(),
                                                  GetSearchRegex(),
                                                  GetCurrentResource(),
@@ -1864,6 +1866,8 @@ void FindReplacePlus::TokeniseSelection()
         cbFind = qobject_cast<PasteTargetComboBox*>(ui.cbPreFind);
         if (GetSearchRegex().isEmpty()) return;
     }
+
+    if (!cbFind || !cbFind->lineEdit()) return;
 
     QString text;
 

@@ -67,6 +67,7 @@ TextTab::~TextTab()
 
 void TextTab::UpdateCodeViewBookPath()
 {
+    if (GetResourceWasDeleted() || !m_wCodeView) return;
     m_wCodeView->SetContentBookPath(m_TextResource->GetRelativePath());
 }
 
@@ -308,6 +309,7 @@ bool TextTab::PasteClipEntries(QList<ClipEditorModel::clipEntry *>clips)
 
 void TextTab::SaveTabContent()
 {
+    if (GetResourceWasDeleted() || !m_wCodeView) return;
     // We can't perform the document modified check
     // here because that causes problems with epub export
     // when the user has not changed the text file.
@@ -367,6 +369,7 @@ void TextTab::EmitUpdateCursorPosition()
 
 void TextTab::DelayedInitialization()
 {
+    if (GetResourceWasDeleted() || !m_wCodeView) return;
     m_wCodeView->CustomSetDocument(m_TextResource->GetTextDocumentForWriting());
     m_wCodeView->Zoom();
     if (m_PositionToScrollTo >= 0) {

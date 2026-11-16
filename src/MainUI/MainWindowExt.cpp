@@ -10,6 +10,7 @@
 #include <QMessageBox>
 #include <QObject>
 #include <QProgressDialog>
+#include <QPointer>
 #include <QReadLocker>
 #include <QSet>
 #include <QTemporaryFile>
@@ -729,14 +730,20 @@ bool MainWindow::EnhanceSourceFormatting()
 
 bool MainWindow::ConvertChineseText()
 {
-    ContentTab *contentTab = GetCurrentContentTab();
-    FlowTab *flowTab = qobject_cast<FlowTab *>(contentTab);
-    SVGTab *svgTab = qobject_cast<SVGTab *>(contentTab);
-    TextTab *textTab = svgTab;
-    Resource *resource = contentTab ? contentTab->GetLoadedResource() : nullptr;
+    const QSharedPointer<Book> conversionBook = m_Book;
+    QPointer<ContentTab> contentTab = GetCurrentContentTab();
+    QPointer<FlowTab> flowTab = qobject_cast<FlowTab *>(contentTab.data());
+    QPointer<SVGTab> svgTab = qobject_cast<SVGTab *>(contentTab.data());
+    QPointer<TextTab> textTab = svgTab.data();
+    QPointer<Resource> resource = contentTab ? contentTab->GetLoadedResource() : nullptr;
     const bool currentFileAvailable = (flowTab || svgTab) && resource;
+    auto editorAvailable = [&]() {
+        return m_Book == conversionBook && contentTab && resource
+            && !contentTab->GetResourceWasDeleted() && (flowTab || textTab)
+            && contentTab == GetCurrentContentTab() && contentTab->GetLoadedResource() == resource;
+    };
 
-    QList<Resource *> selectedResources;
+    QList<QPointer<Resource>> selectedResources;
     if (m_BookBrowser) {
         const QList<Resource *> browserSelection = m_BookBrowser->AllSelectedResources();
         for (Resource *selected : browserSelection) {
@@ -767,6 +774,9 @@ bool MainWindow::ConvertChineseText()
     }
 
     ChineseConversionOptions options = dialog.Options();
+    if (m_Book != conversionBook) return false;
+    if ((options.scope == ChineseConversionScope::CurrentSelection
+         || options.scope == ChineseConversionScope::CurrentFile) && !editorAvailable()) return false;
     ChineseConversionSettings::Save(options);
     const QString dataDirectory = ChineseConversionData::FindDataDirectory();
     if (dataDirectory.isEmpty()) {
@@ -791,7 +801,13 @@ bool MainWindow::ConvertChineseText()
         }
 
         SaveTabData();
-        QList<Resource *> targets = selectedResources;
+        QList<Resource *> targets;
+        if (options.scope == ChineseConversionScope::SelectedResources) {
+            for (const auto& selected : selectedResources) {
+                if (!selected) return false;
+                targets.append(selected.data());
+            }
+        }
         if (options.scope == ChineseConversionScope::AllTextResources) {
             targets.clear();
             const QList<HTMLResource *> htmlResources =
@@ -807,7 +823,7 @@ bool MainWindow::ConvertChineseText()
         }
 
         struct BatchEntry {
-            TextResource *resource = nullptr;
+            QPointer<TextResource> resource;
             QString resourcePath;
             QString source;
             ChineseTextConversionPlan plan;
@@ -874,6 +890,7 @@ bool MainWindow::ConvertChineseText()
         if (preview.exec() != QDialog::Accepted) {
             return false;
         }
+        if (m_Book != conversionBook) return false;
         const QSet<int> enabledRows = preview.EnabledChanges();
         QList<QSet<int>> enabledByResource;
         enabledByResource.resize(batch.size());
@@ -902,7 +919,7 @@ bool MainWindow::ConvertChineseText()
         }
 
         for (const BatchEntry& entry : batch) {
-            if (entry.resource->GetText() != entry.source) {
+            if (!entry.resource || entry.resource->GetText() != entry.source) {
                 Utility::warning(this, tr("Chinese Conversion"),
                                  tr("%1 changed after analysis. No files were changed.")
                                      .arg(entry.resourcePath));
@@ -915,7 +932,9 @@ bool MainWindow::ConvertChineseText()
         opf->InitialLoad();
         const QString opfBeforeCheckpoint = opf->GetText();
         const bool bookWasModified = m_Book->IsModified();
-        if (!RepoCommit()) {
+        const bool checkpointCreated = RepoCommit();
+        if (m_Book != conversionBook) return false;
+        if (!checkpointCreated) {
             opf->SetText(opfBeforeCheckpoint);
             opf->SaveToDisk(true);
             m_Book->SetModified(bookWasModified);
@@ -924,7 +943,7 @@ bool MainWindow::ConvertChineseText()
             return false;
         }
         for (const BatchEntry& entry : batch) {
-            if (entry.resource->GetText() != entry.source) {
+            if (!entry.resource || entry.resource->GetText() != entry.source) {
                 Utility::warning(this, tr("Chinese Conversion"),
                                  tr("%1 changed while creating the checkpoint. No conversion was applied.")
                                      .arg(entry.resourcePath));
@@ -972,6 +991,7 @@ bool MainWindow::ConvertChineseText()
             }
             options.scope = ChineseConversionScope::CurrentFile;
             ChineseConversionSettings::Save(options);
+            if (!editorAvailable()) return false;
         } else {
             QString conversionError;
             const QString convertedText = converter.Convert(selectedText, &conversionError);
@@ -1005,6 +1025,7 @@ bool MainWindow::ConvertChineseText()
                 return false;
             }
 
+            if (!editorAvailable()) return false;
             const QString currentText = flowTab ? flowTab->GetText() : textTab->GetText();
             const int currentStart = flowTab ? flowTab->GetSelectionStart() : textTab->GetSelectionStart();
             const int currentEnd = flowTab ? flowTab->GetSelectionEnd() : textTab->GetSelectionEnd();
@@ -1071,6 +1092,7 @@ bool MainWindow::ConvertChineseText()
         Utility::warning(this, tr("Chinese Conversion"), applyError);
         return false;
     }
+    if (!editorAvailable()) return false;
     const QString currentText = flowTab ? flowTab->GetText() : textTab->GetText();
     if (currentText != sourceText) {
         Utility::warning(this, tr("Chinese Conversion"),

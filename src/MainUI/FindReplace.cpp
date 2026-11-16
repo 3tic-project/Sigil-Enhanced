@@ -709,7 +709,7 @@ void FindReplace::PerformDryRunReplace()
     if (m_DryRunRunning) return;
     m_DryRunRunning = true;
 
-    m_MainWindow->GetCurrentContentTab()->SaveTabContent();
+    if (ContentTab *tab = m_MainWindow->GetCurrentContentTab()) tab->SaveTabContent();
 
     if (IsNewSearch()) {
         SetStartingResource(true);
@@ -730,7 +730,7 @@ void FindReplace::PerformDryRunReplace()
 // Allows you to delete unwanted replacements and apply those remaining
 void FindReplace::ChooseReplacements()
 {
-    m_MainWindow->GetCurrentContentTab()->SaveTabContent();
+    if (ContentTab *tab = m_MainWindow->GetCurrentContentTab()) tab->SaveTabContent();
     ShowMessage(tr("Choose Replacements"));
 
     if (IsNewSearch()) {
@@ -758,7 +758,7 @@ void FindReplace::ChooseReplacements()
     if (count > 0) {
         // Signal that the contents have changed and update the view
         m_MainWindow->GetCurrentBook()->SetModified(true);
-        m_MainWindow->GetCurrentContentTab()->ContentChangedExternally();
+        if (ContentTab *tab = m_MainWindow->GetCurrentContentTab()) tab->ContentChangedExternally();
     }
 
     UpdatePreviousFindStrings();
@@ -770,7 +770,7 @@ void FindReplace::ChooseReplacements()
 // replacement text in the entire document.
 int FindReplace::ReplaceAll()
 {
-    m_MainWindow->GetCurrentContentTab()->SaveTabContent();
+    if (ContentTab *tab = m_MainWindow->GetCurrentContentTab()) tab->SaveTabContent();
     clearMessage();
 
     if (IsNewSearch()) {
@@ -817,7 +817,7 @@ int FindReplace::ReplaceAll()
     if (count > 0) {
         // Signal that the contents have changed and update the view
         m_MainWindow->GetCurrentBook()->SetModified(true);
-        m_MainWindow->GetCurrentContentTab()->ContentChangedExternally();
+        if (ContentTab *tab = m_MainWindow->GetCurrentContentTab()) tab->ContentChangedExternally();
     }
 
     UpdatePreviousFindStrings();
@@ -1089,7 +1089,7 @@ QList<Resource*> FindReplace::GetAllResourcesToSearch()
     QList<Resource *> resources;
 
     if (isWhereCF() || m_LookWhereCurrentFile) {
-        resources << GetCurrentResource();
+        if (Resource *resource = GetCurrentResource()) resources << resource;
     } else {
         resources = GetFilesToSearch(true);
     }
@@ -1231,7 +1231,7 @@ QList <Resource *> FindReplace::GetFilesToSearch(bool force_all)
 
 int FindReplace::CountInFiles()
 {
-    m_MainWindow->GetCurrentContentTab()->SaveTabContent();
+    if (ContentTab *tab = m_MainWindow->GetCurrentContentTab()) tab->SaveTabContent();
 
     QList<Resource *>search_files = GetFilesToSearch(true);
     if (search_files.isEmpty()) return 0;
@@ -1248,7 +1248,7 @@ int FindReplace::CountInFiles()
 
 int FindReplace::ReplaceInAllFiles()
 {
-    m_MainWindow->GetCurrentContentTab()->SaveTabContent();
+    if (ContentTab *tab = m_MainWindow->GetCurrentContentTab()) tab->SaveTabContent();
     QList<Resource *>search_files = GetFilesToSearch(true);
     if (search_files.isEmpty()) return 0;
 
@@ -1499,7 +1499,8 @@ Resource *FindReplace::GetNextResource(Resource *current_resource, Searchable::D
 
 Resource *FindReplace::GetCurrentResource()
 {
-    return m_MainWindow->GetCurrentContentTab()->GetLoadedResource();
+    ContentTab *tab = m_MainWindow->GetCurrentContentTab();
+    return tab ? tab->GetLoadedResource() : nullptr;
 }
 
 
@@ -1809,7 +1810,8 @@ void FindReplace::WriteSettings()
 
 Searchable *FindReplace::GetAvailableSearchable()
 {
-    Searchable *searchable = m_MainWindow->GetCurrentContentTab()->GetSearchableContent();
+    ContentTab *tab = m_MainWindow->GetCurrentContentTab();
+    Searchable *searchable = tab ? tab->GetSearchableContent() : nullptr;
 
     if (!searchable) {
         ShowMessage(tr("This tab cannot be searched"));
@@ -1912,7 +1914,7 @@ void FindReplace::SetStartingResource(bool update_position)
 
     m_StartingPos = -1;
     m_InRemainder = false;
-    if (m_StartingResource == current_resource) {
+    if (current_resource && m_StartingResource == current_resource) {
         m_StartingPos = m_MainWindow->GetCurrentContentTab()->GetCursorPosition();
     }
 }

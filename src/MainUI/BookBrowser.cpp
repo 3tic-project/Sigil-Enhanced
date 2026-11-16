@@ -685,15 +685,13 @@ void BookBrowser::AddNew()
 // Create a new HTML file and copy the text from the current file into it
 void BookBrowser::CopyHTML()
 {
-    Resource *current_resource = GetCurrentResource();
+    HTMLResource *current_html_resource = qobject_cast<HTMLResource *>(GetCurrentResource());
 
-    if (!current_resource) {
+    if (!current_html_resource || !m_Book) {
         return;
     }
 
-    QString destfolder = Utility::startingDir(current_resource->GetRelativePath());
-
-    HTMLResource *current_html_resource = qobject_cast<HTMLResource *>(current_resource);
+    QString destfolder = Utility::startingDir(current_html_resource->GetRelativePath());
     // Create an empty file
     HTMLResource *new_html_resource = m_Book->CreateEmptyHTMLFile(destfolder);
     m_Book->MoveResourceAfter(new_html_resource, current_html_resource);
@@ -730,14 +728,13 @@ void BookBrowser::AddNewHTML()
 
 void BookBrowser::CopyCSS()
 {
-    Resource *current_resource = GetCurrentResource();
+    CSSResource *current_css_resource = qobject_cast<CSSResource *>(GetCurrentResource());
 
-    if (!current_resource) {
+    if (!current_css_resource || !m_Book) {
         return;
     }
 
-    CSSResource *current_css_resource = qobject_cast<CSSResource *>(current_resource);
-    QString destfolder = Utility::startingDir(current_resource->GetRelativePath());
+    QString destfolder = Utility::startingDir(current_css_resource->GetRelativePath());
 
     // Create an empty file
     CSSResource *new_resource = m_Book->CreateEmptyCSSFile(destfolder);
@@ -2084,7 +2081,7 @@ void BookBrowser::LinkJavascripts()
 
 void BookBrowser::NoObfuscationMethod()
 {
-    foreach(Resource * resource, ValidSelectedResources()) {
+    foreach(Resource * resource, ValidSelectedResources(Resource::FontResourceType)) {
         FontResource *font_resource = qobject_cast<FontResource *>(resource);
         Q_ASSERT(font_resource);
         font_resource->SetObfuscationAlgorithm("");
@@ -2095,7 +2092,7 @@ void BookBrowser::NoObfuscationMethod()
 
 void BookBrowser::AdobesObfuscationMethod()
 {
-    foreach(Resource * resource, ValidSelectedResources()) {
+    foreach(Resource * resource, ValidSelectedResources(Resource::FontResourceType)) {
         FontResource *font_resource = qobject_cast<FontResource *>(resource);
         Q_ASSERT(font_resource);
         font_resource->SetObfuscationAlgorithm(ADOBE_FONT_ALGO_ID);
@@ -2106,7 +2103,7 @@ void BookBrowser::AdobesObfuscationMethod()
 
 void BookBrowser::IdpfsObfuscationMethod()
 {
-    foreach(Resource * resource, ValidSelectedResources()) {
+    foreach(Resource * resource, ValidSelectedResources(Resource::FontResourceType)) {
         FontResource *font_resource = qobject_cast<FontResource *>(resource);
         Q_ASSERT(font_resource);
         font_resource->SetObfuscationAlgorithm(IDPF_FONT_ALGO_ID);
@@ -2442,9 +2439,9 @@ bool BookBrowser::SuccessfullySetupContextMenu(const QPoint &point)
 
 void BookBrowser::SetupImageSemanticContextMenu(Resource *resource)
 {
+    ImageResource *image_resource = qobject_cast<ImageResource *>(resource);
+    if (!image_resource) return;
     m_ContextMenu->addAction(m_CoverImage);
-    ImageResource *image_resource = qobject_cast<ImageResource *>(GetCurrentResource());
-    Q_ASSERT(image_resource);
     m_CoverImage->setChecked(false);
 
     if (m_Book->GetOPF()->IsCoverImage(image_resource)) {
@@ -2464,21 +2461,22 @@ void BookBrowser::SetupFontObfuscationMenu()
 
 void BookBrowser::SetFontObfuscationActionCheckState()
 {
-    Resource *resource = GetCurrentResource();
+    m_NoObfuscationMethod->setChecked(false);
+    m_AdobesObfuscationMethod->setChecked(false);
+    m_IdpfsObfuscationMethod->setChecked(false);
+    FontResource *font_resource = qobject_cast<FontResource *>(GetCurrentResource());
 
-    if (resource->Type() != Resource::FontResourceType) {
+    if (!font_resource) {
         return;
     }
 
     // Get the algorithm used by the first font
-    FontResource *font_resource = qobject_cast<FontResource *>(resource);
-    Q_ASSERT(font_resource);
     QString algorithm = font_resource->GetObfuscationAlgorithm();
     // Now compare against all the other fonts and if the same set a checkmark
     bool same_algorithm = true;
     foreach(Resource * resource, ValidSelectedResources()) {
         FontResource *font_resource2 = qobject_cast<FontResource *>(resource);
-        Q_ASSERT(font_resource);
+        if (!font_resource2) return;
         QString algorithm2 = font_resource2->GetObfuscationAlgorithm();
 
         if (algorithm2 != algorithm) {

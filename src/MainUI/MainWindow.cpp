@@ -65,6 +65,7 @@
 #include <QDirIterator>
 #include <QDebug>
 #include <QReadLocker>
+#include <QPointer>
 #include <QTemporaryDir>
 
 #include "BookManipulation/CleanSource.h"
@@ -2165,8 +2166,10 @@ void MainWindow::OpenResourceAndWaitUntilLoaded(Resource *resource,
         const QUrl &fragment,
         bool precede_current_tab)
 {
+    if (!resource) return;
     OpenResource(resource, line_to_scroll_to, position_to_scroll_to, caret_location_to_scroll_to, fragment, precede_current_tab);
-    while (!GetCurrentContentTab()->IsLoadingFinished()) {
+    const QPointer<ContentTab> tab(GetCurrentContentTab());
+    while (tab && !tab->GetResourceWasDeleted() && !tab->IsLoadingFinished()) {
         qApp->processEvents();
         SleepFunctions::msleep(100);
     }
@@ -5313,7 +5316,7 @@ void MainWindow::UpdateMWState(bool set_tab_state)
 {
     ContentTab *tab = GetCurrentContentTab();
 
-    if (tab == NULL) {
+    if (tab == NULL || !tab->GetLoadedResource()) {
         m_LastPasteTarget = nullptr;
         DBG qDebug() << "UpdateMWState had current tab Null so reset m_LastPasteTarget";
         return;
@@ -5361,7 +5364,7 @@ void MainWindow::UpdateUIOnTabChanges()
 {
     ContentTab *tab = m_TabManager->GetCurrentContentTab();
 
-    if (tab == NULL) {
+    if (tab == NULL || !tab->GetLoadedResource()) {
         return;
     }
 

@@ -135,6 +135,7 @@ FlowTab::~FlowTab()
 
 void FlowTab::UpdateCodeViewBookPath()
 {
+    if (GetResourceWasDeleted() || !m_wCodeView) return;
     m_wCodeView->SetContentBookPath(m_HTMLResource->GetRelativePath());
 }
 
@@ -160,6 +161,7 @@ void FlowTab::CreateCodeViewIfRequired(bool is_delayed_load)
 
 void FlowTab::DelayedInitialization()
 {
+    if (GetResourceWasDeleted() || !m_wCodeView) return;
     if (m_wCodeView) {
         m_wCodeView->CustomSetDocument(m_HTMLResource->GetTextDocumentForWriting());
         // Zoom factor for CodeView can only be set when document has been loaded.
@@ -250,6 +252,7 @@ void FlowTab::LoadTabContent()
 
 void FlowTab::SaveTabContent()
 {
+    if (GetResourceWasDeleted()) return;
     // In CV, the connection between QPlainTextEdit and the underlying QTextDocument
     //        means the resource already is "saved". We just need to reset modified state.
     m_HTMLResource->GetTextDocumentForWriting().setModified(false);
@@ -260,7 +263,7 @@ void FlowTab::ResourceModified()
     // Resource-owned QTextDocuments can notify during editor/highlighter
     // teardown. The editor pointer is cleared before deletion so re-entrant
     // notifications cannot access a partially destroyed CodeViewEditor.
-    if (!m_wCodeView) {
+    if (GetResourceWasDeleted() || !m_wCodeView) {
         return;
     }
 

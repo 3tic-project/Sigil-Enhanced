@@ -26,6 +26,7 @@
 
 #include <QWidget>
 #include <QString>
+#include <QPointer>
 #include <QtCore/QUrl>
 
 #include "Misc/Utility.h"
@@ -514,7 +515,7 @@ protected:
     /**
      * The resource being displayed.
      */
-    Resource *m_Resource;
+    QPointer<Resource> m_Resource;
 
     /**
      * The main layout of the widget.
