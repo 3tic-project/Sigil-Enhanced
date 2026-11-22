@@ -156,11 +156,15 @@ class CiPackagingTest(unittest.TestCase):
             "<current-version>{0}</current-version>".format(update_version),
             VERSION_XML.read_text(encoding="utf-8"),
         )
+        changelog = CHANGELOG.read_text(encoding="utf-8")
+        expected_heading = "Sigil-Enhanced-{0}".format(update_version)
         self.assertTrue(
-            CHANGELOG.read_text(encoding="utf-8").startswith(
-                "Sigil-Enhanced-{0}\n".format(update_version)
-            )
+            changelog.startswith("Unreleased\n")
+            or changelog.startswith(expected_heading + "\n")
         )
+        latest_release = re.search(r"^Sigil-Enhanced-[^\n]+$", changelog, re.MULTILINE)
+        self.assertIsNotNone(latest_release)
+        self.assertEqual(latest_release.group(0), expected_heading)
         release_notes = (
             ROOT / "docs" / "ReleaseNotes-{0}.md".format(release_version)
         )

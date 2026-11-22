@@ -2,6 +2,8 @@
 
 从“添加 XHTML 副本后立即重命名”的文本缓存死锁继续检查自有 `src` 代码中的互斥锁、读写锁、Python GIL、条件等待、阻塞跨线程调用和持锁处理界面的路径。保留搜索栏在编辑器下方的布局。
 
+锁修复提交为 `d6dec4d34`。后续 `bf991cc1a` 的生命周期检查见[空指针审查](NullPointerAudit.md)，最初反馈及 Windows 待测项目见[Windows E14 反馈修复](WindowsE14FeedbackFixes.md)。下方全量测试数字记录锁修复阶段的验证结果。
+
 ## 修复
 
 | 路径 | 问题 | 处理 |
@@ -57,10 +59,10 @@ ctest --test-dir cmake-build-debug -R '^(agent_locking|lock_reentrancy_integrati
 
 真实对象集成测试目前使用已有 macOS Ninja Debug 构建。Windows 检查工程可独立构建；Windows 10 的原生窗口、文件选择器和锁竞争仍需 Windows 实机复测。
 
-## 本轮结果
+## 锁修复阶段的验证结果（d6dec4d34）
 
 - 应用及全部测试目标构建成功；锁专项九个真实对象场景、Agent 并发测试、目录编辑集成测试通过。Agent 并发测试还连续运行五次通过。
 - 全量 195 项 Debug CTest 已运行，修复后按用例统计为 188 项通过、3 项私有 Cmoa 样本缺失而跳过、4 项未通过。没有修改这些用例的通过标准。
-- 三项未通过的是 `zh_cn_translation_coverage`、`zh_tw_translation_coverage` 和 `ja_translation_coverage`。从修改前的 `18a5369c4` 提取源码，逐语言对照：每种语言原有的 84 条问题与本分支完全相同。
+- 三项未通过的是 `zh_cn_translation_coverage`、`zh_tw_translation_coverage` 和 `ja_translation_coverage`。从修改前的 `18a5369c4` 提取源码，逐语言对照：每种语言原有的 84 条问题与锁修复提交完全相同。
 - 另一项是未改动的 `div_paragraph_performance`：20 MiB/200 文件在 Debug 下串行复测耗时 33077 ms，超过原有 30000 ms 预算。其测试和全部自有源码依赖与修改前一致；相同用例另以 Release 构建运行，耗时 17957 ms，通过原有预算。
 - ThreadSanitizer 对会话及 GUI 等待路径的运行通过；预编译 Qt 条件等待的验证限制见上文。Windows CI 已增加 Agent 锁测试，本轮没有运行远程 Windows CI。

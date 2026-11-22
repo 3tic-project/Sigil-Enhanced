@@ -2,6 +2,17 @@
 
 反馈来自 Windows E14；开发与本地运行环境为 macOS、Qt 6.7.3。
 
+## 当前源码状态（2026-11-16）
+
+以下修复已提交到源码。安装包是否包含这些提交，以实际构建为准；本记录中的本地通过结果属于 macOS，Windows 10 实机验收仍待完成。
+
+| 范围 | 修复提交 | 详细记录 |
+| --- | --- | --- |
+| 同名字体覆盖、搜索与 Dock 布局 | `220de0c29`、`cf5b38ad1` | 本文对应反馈；搜索栏保持在编辑器下方 |
+| XHTML 添加副本后立即重命名 | `18a5369c4` | 本文复制重命名回归 |
+| 锁、Python GIL、目录及拼写检查共享状态 | `d6dec4d34` | [锁与重入检查](LockAudit.md) |
+| 空编辑页、错误资源类型及资源销毁后的访问 | `bf991cc1a` | [空指针与资源生命周期检查](NullPointerAudit.md) |
+
 ## 同名字体覆盖闪退
 
 `BookBrowser::AddExisting` 接受字体、SVG、音视频覆盖，却在覆盖后无条件使用 `ImageResource` 转型结果。替换字体时该指针为空。现在通知实际被覆盖的资源，不删除或重建资源；路径、资源 ID、OPF 清单及资源属性保持不变。
@@ -26,7 +37,13 @@
 
 本地实际复制／重命名流程出现过卡住；另用同步文本回读观察者稳定复现，并抓到 `DelayedUpdateToTextDocument → setPlainText → contentsChanged → GetText → QMutex::lock` 的等待栈。回归通过真实的“添加副本”和行内文件名编辑器，覆盖立即重命名、编辑器加载完成后重命名、编辑后重命名及通知内同步回读；每种情况连续复制、重命名三次，并检查导出 EPUB 的正文、资源身份、清单和阅读顺序。
 
-## 验证范围
+## 后续锁与空指针排查
+
+锁排查补充处理 Python/OPF 弹窗中的持锁重入、目录后台读取与书籍切换、目录标题窗口长期持锁、词典重载及 Agent 会话同步。目录标题首次编辑重新排版后，后续层级和 ID 修改也会更新节点位置。锁专项包含九个真实对象场景；全量回归的既有翻译缺项、Debug 性能超预算及 Qt 条件等待的 sanitizer 限制见[锁检查结果](LockAudit.md)。
+
+空指针排查补充覆盖错误类型的副本和字体操作、关闭全部编辑页后的两种搜索、加载期间关闭目标页，以及简繁转换弹窗和资源销毁后的回调。新增 17 个独立进程场景，20 项相关检查复测后全部通过，包含字体覆盖、复制重命名、布局、搜索记忆、EPUB 2/3 保存、Agent 隔离和翻译窗口。详细场景与复跑方式见[空指针检查](NullPointerAudit.md)。
+
+## 初次反馈修复的验证范围
 
 - Sigil Debug 构建成功；缓存锁修复后的 14 项相关 CTest 全部通过（247.66 秒），覆盖复制重命名、正文和 OPF 保存、替换撤销、Code View、搜索历史、布局、Agent 与翻译窗口，以及字体覆盖。
 - macOS Cocoa 原生窗口下，四种复制重命名场景再次全部通过，导出 EPUB 校验通过。每种场景连续执行三次，共 12 次复制重命名。
@@ -45,3 +62,20 @@ SIGIL_NATIVE_TEST_PLATFORM=cocoa python3 tests/run_book_browser_replace_integrat
 SIGIL_NATIVE_TEST_PLATFORM=cocoa python3 tests/run_book_browser_copy_rename_integration.py \
   cmake-build-debug
 ```
+
+后续专项复跑同样需要 macOS Ninja Debug 构建：
+
+```sh
+ctest --test-dir cmake-build-debug --output-on-failure \
+  -R '^(agent_locking|lock_reentrancy_integration|null_pointer_integration)$'
+```
+
+## Windows 10 待复测
+
+使用包含上表修复提交的构建，记录程序提交、Qt 版本及 Windows 缩放设置，复查：
+
+1. 系统原生和 Qt 文件选择框分别导入同名字体，覆盖和取消都能正常完成；原资源身份、清单及正文保持正确。
+2. 两种搜索栏保持在编辑器下方；开关搜索、拉宽预览并重开窗口后，面板标题无重复绘制，图书浏览器宽度正确恢复。
+3. 新建 XHTML 副本后立即重命名，以及先编辑再重命名；保存后正文、链接和阅读顺序正确。
+4. 关闭所有编辑页后，普通和增强搜索仍能在全书范围统计、替换；简繁转换或加载等待期间关闭目标页，操作能安全结束。
+5. Agent 工具调用和后台目录读取期间，其他书籍窗口的对话框保持正常；目录标题窗口内连续改名、改层级、应用后结果正确。

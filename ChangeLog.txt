@@ -1,3 +1,28 @@
+Unreleased
+   Runtime Stability (2026-11-16)
+     - Fixed same-name font replacement through Add Existing by notifying the actual resource
+       instead of dereferencing an ImageResource cast for fonts and other resource types.
+     - Kept Find/Replace below the editor and restored dock layouts after search initialization;
+       returned dock title painting to Qt.
+     - Fixed the text-cache deadlock when copying XHTML and immediately renaming the copy.
+     - Queued Python error and OPF version dialogs after critical sections, protected Python
+       reference counts with the GIL, and kept background TOC parsing tied to its source book.
+     - Released the source book on the GUI thread after TOC parsing and shortened heading-dialog
+       write locks; refreshed heading paths after edits so later level and ID changes stay valid.
+     - Synchronized dictionary readers and reloads, cleared unloaded dictionary pointers, and
+       protected Agent session state while replacing GUI approval polling with event-loop waits.
+     - Rejected wrong-type copy and font actions before changing the book, and supported whole-book
+       count and replacement without open editor tabs in both search modes.
+     - Guarded loading waits, Chinese-conversion dialogs and queued editor initialization against
+       closed tabs or destroyed resources, with empty metadata for destroyed resources.
+
+   Validation
+     - Added nine lock-reentrancy scenarios and 17 null-pointer/lifetime scenarios using real Sigil
+       objects; the null-pointer follow-up passed 20 related checks after retesting.
+     - Recorded local verification, existing translation/performance failures and sanitizer limits
+       in docs/LockAudit.md and docs/NullPointerAudit.md. Windows 10 real-machine validation remains
+       pending; these source changes do not constitute a new package release.
+
 Sigil-Enhanced-2.8.6.E14
    New Features
      - Synced Sigil 2.8.6: JXL images render in Preview, View Image and Insert Image through a
