@@ -65,6 +65,7 @@ class CiPackagingTest(unittest.TestCase):
         self.assertIn("python3 ci_scripts/prepare_release_assets.py release-assets", self.workflow)
         self.assertIn("gh release create", self.workflow)
         self.assertIn("gh release upload", self.workflow)
+        self.assertIn('--notes-file "docs/ReleaseNotes-${SIGIL_VERSION}.md"', self.workflow)
         self.assertRegex(
             self.workflow,
             r"release:\n(?:.*\n){0,8}\s+permissions:\n\s+contents: write",

@@ -22043,6 +22043,10 @@ Line: %1 Column %2 - %3</source>
     </message>
     <message><source>Rule %1</source><translation>ルール %1</translation></message>
     <message><source>The OPF manifest contains duplicate file paths. You should edit your OPF file's manifest to remove the duplication.</source><translation>OPF マニフェストに重複したファイルパスがあります。OPF ファイルのマニフェストを編集して重複を削除してください。</translation></message>
+    <message>
+        <source>Error Line: %1 Column %2 - %3</source>
+        <translation>エラー（行 %1、列 %2）：%3</translation>
+    </message>
 </context>
 <context>
     <name>RERenamer</name>
@@ -27411,6 +27415,28 @@ Continue using the requested filename?</source>
     <message><source>Export debug log</source><translation>デバッグログをエクスポート</translation></message>
     <message><source>JSON (*.json);;All files (*)</source><translation>JSON (*.json);;すべてのファイル (*)</translation></message>
     <message><source>Markdown (*.md);;All files (*)</source><translation>Markdown (*.md);;すべてのファイル (*)</translation></message>
+    <message>
+        <source>后台翻译已结束。以下为宿主实际结果：%1
+请接续原用户目标：按需处理失败项（最多两次），仅在用户要求时保存词表，并报告实际完成/失败数量及书籍尚未保存。written/translated 表示已存在于书中的译文，reviewed 仅表示已校正，不能将未校正的译文说成未写入；stage_failures 区分扫描和校正问题。不要重新启动已完成的全书翻译。若启动补缺或校正，它会继续在后台执行；请简短说明已启动并结束本轮回复，等待下一条宿主完成通知，不要循环查询状态。</source>
+        <translation>バックグラウンド翻訳が終了しました。ホストで確認した結果は次のとおりです：%1
+元のユーザーの目標に沿って続けてください。必要に応じて失敗項目を再処理し（最大 2 回）、ユーザーが求めた場合だけ用語集を保存してください。実際の完了件数と失敗件数に加え、書籍が未保存であることを伝えてください。written/translated は書籍に書き込まれた訳文を表します。reviewed は校正済みを示すため、未校正でも書き込み済みの場合があります。stage_failures でスキャンと校正の問題を区別してください。完了した書籍全体の翻訳を再実行しないでください。不足分の再処理や校正を開始した場合はバックグラウンドで続行されます。開始したことを短く伝えて今回の応答を終え、次の完了通知を待ってください。状態を繰り返し照会する必要はありません。</translation>
+    </message>
+    <message>
+        <source>方向转换未完成，请查看校验结果。</source>
+        <translation>書字方向の変換が完了していません。検証結果を確認してください。</translation>
+    </message>
+    <message>
+        <source>翻译后续处理已达到重试次数，剩余问题请通过 Agent 查询翻译状态。</source>
+        <translation>翻訳の後処理が再試行の上限に達しました。残りの問題は Agent で翻訳状況を確認してください。</translation>
+    </message>
+    <message>
+        <source>翻译图片适配</source>
+        <translation>翻訳書籍の画像サイズを調整</translation>
+    </message>
+    <message>
+        <source>请先结束当前书籍事务。</source>
+        <translation>先に現在の書籍トランザクションを終了してください。</translation>
+    </message>
 </context>
 <context>
     <name>PluginSession</name>
@@ -27693,6 +27719,98 @@ Continue using the requested filename?</source>
     <message><source>Failure: %1 — %2</source><translation>失敗：%1 — %2</translation></message>
     <message><source>Failure: %1</source><translation>失敗：%1</translation></message>
     <message><source>Apply failed</source><translation>適用に失敗</translation></message>
+    <message>
+        <source> · one batch remains</source>
+        <translation> · 残り 1 バッチ</translation>
+    </message>
+    <message>
+        <source> · one terminology merge remains</source>
+        <translation> · 残り 1 件の用語統合</translation>
+    </message>
+    <message>
+        <source> · recovering after rate limit</source>
+        <translation> · レート制限後の同時実行数を復旧中</translation>
+    </message>
+    <message>
+        <source> · waiting to reconnect</source>
+        <translation> · 再接続待ち</translation>
+    </message>
+    <message>
+        <source>%1: %v/%m</source>
+        <translation>%1: %v/%m</translation>
+    </message>
+    <message>
+        <source>Active %1 · Concurrency %2/%3 · Queued %4 · Requests %5 · Retries %6</source>
+        <translation>実行中 %1 · 同時実行 %2/%3 · 待機 %4 · リクエスト %5 · 再試行 %6</translation>
+    </message>
+    <message>
+        <source>Background task</source>
+        <translation>バックグラウンドタスク</translation>
+    </message>
+    <message>
+        <source>Book translation · %1</source>
+        <translation>書籍の翻訳 · %1</translation>
+    </message>
+    <message>
+        <source>Completed</source>
+        <translation>完了</translation>
+    </message>
+    <message>
+        <source>Formatting</source>
+        <translation>書式を調整中</translation>
+    </message>
+    <message>
+        <source>Needs attention</source>
+        <translation>要確認</translation>
+    </message>
+    <message>
+        <source>Organizing terminology</source>
+        <translation>用語を整理中</translation>
+    </message>
+    <message>
+        <source>Pause</source>
+        <translation>一時停止</translation>
+    </message>
+    <message>
+        <source>Paused</source>
+        <translation>一時停止中</translation>
+    </message>
+    <message>
+        <source>Ready</source>
+        <translation>準備完了</translation>
+    </message>
+    <message>
+        <source>Reconnecting… %1/%2 · waiting %3 s</source>
+        <translation>再接続中… %1/%2 · %3 秒待機</translation>
+    </message>
+    <message>
+        <source>Resume</source>
+        <translation>再開</translation>
+    </message>
+    <message>
+        <source>Retry unfinished</source>
+        <translation>未完了の項目を再試行</translation>
+    </message>
+    <message>
+        <source>Reviewing</source>
+        <translation>校正中</translation>
+    </message>
+    <message>
+        <source>Scanned %1/%2 · Written %3/%2 · Reviewed %4/%2 · Issues %5 · Incomplete stages %6</source>
+        <translation>スキャン済み %1/%2 · 書き込み済み %3/%2 · 校正済み %4/%2 · 問題 %5 · 未完了工程 %6</translation>
+    </message>
+    <message>
+        <source>Scanning</source>
+        <translation>スキャン中</translation>
+    </message>
+    <message>
+        <source>Starting</source>
+        <translation>起動中</translation>
+    </message>
+    <message>
+        <source>Translating</source>
+        <translation>翻訳中</translation>
+    </message>
 </context>
 <context>
     <name>AgentSettingsWidget</name>
@@ -27750,6 +27868,50 @@ Continue using the requested filename?</source>
     <message><source>Testing Chat Completions for %1 at %2…</source><translation>%2 のモデル %1 で Chat Completions をテストしています…</translation></message>
     <message><source>Chat Completions succeeded for %1 at %2 in %3 ms.</source><translation>%2 のモデル %1 で Chat Completions に成功しました（%3 ミリ秒）。</translation></message>
     <message><source>Chat Completions failed for %1 at %2: %3</source><translation>%2 のモデル %1 で Chat Completions に失敗しました：%3</translation></message>
+    <message>
+        <source>使用 Agent 模型校正</source>
+        <translation>Agent のモデルで校正する</translation>
+    </message>
+    <message>
+        <source>并发</source>
+        <translation>同時リクエスト数</translation>
+    </message>
+    <message>
+        <source>批次目标字数</source>
+        <translation>バッチの目標文字数</translation>
+    </message>
+    <message>
+        <source>新译文段间距</source>
+        <translation>翻訳段落の間隔</translation>
+    </message>
+    <message>
+        <source>沿用 Agent 思考</source>
+        <translation>Agent の思考設定を使う</translation>
+    </message>
+    <message>
+        <source>沿用 Agent 模型</source>
+        <translation>Agent のモデルを使う</translation>
+    </message>
+    <message>
+        <source>翻译思考</source>
+        <translation>翻訳時の思考レベル</translation>
+    </message>
+    <message>
+        <source>翻译模型</source>
+        <translation>翻訳モデル</translation>
+    </message>
+    <message>
+        <source>翻译（复用上方连接）</source>
+        <translation>翻訳（上記の接続設定を使用）</translation>
+    </message>
+    <message>
+        <source>自动调整</source>
+        <translation>自動調整</translation>
+    </message>
+    <message>
+        <source>自动：优先关闭思考</source>
+        <translation>自動（思考オフを優先）</translation>
+    </message>
 </context>
 <context>
     <name>CmoaParagraphNormalizer</name>
@@ -27773,6 +27935,189 @@ Continue using the requested filename?</source>
     <message>
         <source>This book contains no exportable text.</source>
         <translation>この書籍にはエクスポートできるテキストがありません。</translation>
+    </message>
+</context>
+<context>
+    <name>BuiltinPlugins::Translation::TranslationController</name>
+    <message>
+        <source>Another book transaction is active</source>
+        <translation>別の書籍トランザクションが実行中です</translation>
+    </message>
+    <message>
+        <source>Batch bilingual translation</source>
+        <translation>一括対訳</translation>
+    </message>
+    <message>
+        <source>Batch exceeds model context/output space; reducing batch size</source>
+        <translation>モデルのコンテキストまたは出力の上限を超えました。バッチを縮小します</translation>
+    </message>
+    <message>
+        <source>Before bilingual translation</source>
+        <translation>対訳の実行前</translation>
+    </message>
+    <message>
+        <source>Before translation formatting</source>
+        <translation>翻訳の書式調整前</translation>
+    </message>
+    <message>
+        <source>Book format conversion is available in the Sigil window</source>
+        <translation>書籍の書式変換は Sigil のウィンドウで実行できます</translation>
+    </message>
+    <message>
+        <source>Choose at least one stage; omit stages for the default workflow</source>
+        <translation>少なくとも 1 つの工程を選んでください。既定の手順を使う場合は stages を省略してください</translation>
+    </message>
+    <message>
+        <source>Configure the Agent connection, model and API key first</source>
+        <translation>先に Agent の接続、モデル、API キーを設定してください</translation>
+    </message>
+    <message>
+        <source>Current book changed</source>
+        <translation>開いている書籍が切り替わりました</translation>
+    </message>
+    <message>
+        <source>Finish the current book transaction first</source>
+        <translation>先に現在の書籍トランザクションを終了してください</translation>
+    </message>
+    <message>
+        <source>Missing/empty paragraph translations</source>
+        <translation>一部の段落の訳文が欠けているか、空です</translation>
+    </message>
+    <message>
+        <source>Model output truncated; reducing batch and reserving output space</source>
+        <translation>モデルの出力が途中で切れました。バッチを縮小し、出力枠を確保します</translation>
+    </message>
+    <message>
+        <source>No glossary in this book</source>
+        <translation>この書籍に用語集はありません</translation>
+    </message>
+    <message>
+        <source>No open book</source>
+        <translation>書籍が開かれていません</translation>
+    </message>
+    <message>
+        <source>No prepared reading paragraphs</source>
+        <translation>翻訳対象の段落がまだ準備されていません</translation>
+    </message>
+    <message>
+        <source>No translatable paragraphs in this range</source>
+        <translation>この範囲に翻訳できる段落はありません</translation>
+    </message>
+    <message>
+        <source>No translation in this book</source>
+        <translation>この書籍に訳文はありません</translation>
+    </message>
+    <message>
+        <source>Paragraph has no safe sentence/word boundaries; preserving source</source>
+        <translation>文や単語の境界で段落を安全に分割できないため、原文を保持します</translation>
+    </message>
+    <message>
+        <source>Paragraph indexes must come from this prepared scope</source>
+        <translation>準備した範囲内の段落インデックスを使ってください</translation>
+    </message>
+    <message>
+        <source>Pause/stop the current translation before preparing another range</source>
+        <translation>別の範囲を準備する前に、現在の翻訳を一時停止または停止してください</translation>
+    </message>
+    <message>
+        <source>Prepare a range in the current book first</source>
+        <translation>先に現在の書籍で対象範囲を準備してください</translation>
+    </message>
+    <message>
+        <source>Prepare this book first</source>
+        <translation>先にこの書籍を準備してください</translation>
+    </message>
+    <message>
+        <source>Reconnecting %1/%2: %3</source>
+        <translation>再接続中 %1/%2：%3</translation>
+    </message>
+    <message>
+        <source>Retrying smaller/failed batch %1/2: %2</source>
+        <translation>縮小または失敗したバッチを再試行中 %1/2：%2</translation>
+    </message>
+    <message>
+        <source>Save translation glossary</source>
+        <translation>翻訳用語集を保存</translation>
+    </message>
+    <message>
+        <source>Select a JSON glossary in this book's Misc folder</source>
+        <translation>この書籍の Misc フォルダーから JSON 形式の用語集を選んでください</translation>
+    </message>
+    <message>
+        <source>Select at least one prepared paragraph</source>
+        <translation>準備済みの段落を 1 つ以上選んでください</translation>
+    </message>
+    <message>
+        <source>Selection requires one resource and a nonempty source range</source>
+        <translation>選択範囲は 1 つのリソース内にあり、原文を含む必要があります</translation>
+    </message>
+    <message>
+        <source>Source or translation changed; prepare this range again</source>
+        <translation>原文または訳文が変更されました。この範囲を準備し直してください</translation>
+    </message>
+    <message>
+        <source>Source or translation changed; preserving your edit</source>
+        <translation>原文または訳文が変更されたため、編集内容を保持します</translation>
+    </message>
+    <message>
+        <source>Source structure changed; prepare this resource again</source>
+        <translation>原文の構造が変更されました。このリソースを準備し直してください</translation>
+    </message>
+    <message>
+        <source>Stop the current run before correcting terminology</source>
+        <translation>用語を修正する前に、現在のタスクを停止してください</translation>
+    </message>
+    <message>
+        <source>The current book's Misc folder is unavailable</source>
+        <translation>現在の書籍の Misc フォルダーを使用できません</translation>
+    </message>
+    <message>
+        <source>Translation already running</source>
+        <translation>翻訳はすでに実行中です</translation>
+    </message>
+    <message>
+        <source>Translation session changed</source>
+        <translation>翻訳セッションが切り替わりました</translation>
+    </message>
+    <message>
+        <source>Unknown context kind</source>
+        <translation>不明なコンテキストの種類です</translation>
+    </message>
+    <message>
+        <source>Unknown resource: %1</source>
+        <translation>不明なリソース：%1</translation>
+    </message>
+    <message>
+        <source>Unknown translation stage</source>
+        <translation>不明な翻訳工程です</translation>
+    </message>
+    <message>
+        <source>Unknown/unavailable translation action</source>
+        <translation>不明な翻訳操作か、現在使用できない操作です</translation>
+    </message>
+    <message>
+        <source>Update translation glossary</source>
+        <translation>翻訳用語集を更新</translation>
+    </message>
+    <message>
+        <source>Use a JSON filename without a directory</source>
+        <translation>ディレクトリを含まない JSON ファイル名を指定してください</translation>
+    </message>
+    <message>
+        <source>Use a nonnegative paragraph offset and positive limit</source>
+        <translation>段落の開始位置には 0 以上、件数の上限には 1 以上を指定してください</translation>
+    </message>
+    <message>
+        <source>Use plan object, memory string or glossary array</source>
+        <translation>計画のオブジェクト、記憶の文字列、または用語集の配列を指定してください</translation>
+    </message>
+    <message>
+        <source>Wait for background translation to finish before saving the completed glossary</source>
+        <translation>バックグラウンド翻訳の終了後に、完成した用語集を保存してください</translation>
+    </message>
+    <message>
+        <source>Wait for in-flight batches before formatting</source>
+        <translation>実行中のバッチの完了後に、書式を調整してください</translation>
     </message>
 </context>
 </TS>

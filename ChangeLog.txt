@@ -1,5 +1,14 @@
-Unreleased
-   Search and Window Feedback (2026-11-22)
+Sigil-Enhanced-2.8.6.E15
+   New Features
+     - Added bilingual translation to the native Agent. It edits the current book in batches and
+       can scan, organize terminology, translate, review, or format an entire book or a smaller range.
+     - Added a background task card with progress, active and queued requests, retries, and controls.
+       Translation state is scoped to the Agent conversation, and glossaries can be saved to Misc.
+     - Reused Agent connection settings with separate translation model, reasoning, and concurrency
+       preferences. Transient failures are retried up to five times, with adaptive batch sizes and
+       concurrency recovery after rate limits.
+
+   Search and Window Feedback
      - Focused Code View after a successful Find, including across files in both search modes.
      - Added an enabled-by-default preference for checkpoints before enhanced multi-file Replace All
        and saved-search batches. Turning it off skips the backup and keeps text undo.
@@ -8,7 +17,7 @@ Unreleased
      - Moved closed-book workspace cleanup and retries to a worker while other windows can respond.
        Final application shutdown still finishes or records pending cleanup.
 
-   Runtime Stability (2026-11-16)
+   Runtime Stability
      - Fixed same-name font replacement through Add Existing by notifying the actual resource
        instead of dereferencing an ImageResource cast for fonts and other resource types.
      - Kept Find/Replace below the editor and restored dock layouts after search initialization;
@@ -24,13 +33,19 @@ Unreleased
        count and replacement without open editor tabs in both search modes.
      - Guarded loading waits, Chinese-conversion dialogs and queued editor initialization against
        closed tabs or destroyed resources, with empty metadata for destroyed resources.
+     - Fixed Agent transcript following after streaming and tool cards change the layout, and
+       stopped background resource updates from activating another book window.
 
-   Validation
-     - Added nine lock-reentrancy scenarios and 17 null-pointer/lifetime scenarios using real Sigil
-       objects; the null-pointer follow-up passed 20 related checks after retesting.
-     - Recorded local verification, existing translation/performance failures and sanitizer limits
-       in docs/LockAudit.md and docs/NullPointerAudit.md. Windows 10 real-machine validation remains
-       pending; these source changes do not constitute a new package release.
+   Upstream Fixes
+     - Preserved CSS number tokens and !important while parsing with Lexbor.
+     - Encoded and decoded validation plugin book paths and kept numeric entities available when
+       non-basic named entities are disabled.
+
+   Build/Testing
+     - Completed Simplified Chinese, Traditional Chinese, and Japanese catalogs for the new Agent
+       translation UI and messages.
+     - Added native Agent translation, checkpoint, search focus, book closing, lock reentrancy, and
+       resource lifetime regression coverage. Windows 10 hardware retesting remains pending.
 
 Sigil-Enhanced-2.8.6.E14
    New Features

@@ -573,5 +573,5 @@ jobs:
             gh release create "$tag" release-assets/* \
               --verify-tag \
               --title "Sigil-Enhanced $SIGIL_VERSION" \
-              --generate-notes
+              --notes-file "docs/ReleaseNotes-${SIGIL_VERSION}.md"
           fi

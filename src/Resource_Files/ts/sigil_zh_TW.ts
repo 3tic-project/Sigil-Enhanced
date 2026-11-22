@@ -22038,6 +22038,10 @@ Line: %1 Column %2 - %3</source>
     </message>
     <message><source>Rule %1</source><translation>規則 %1</translation></message>
     <message><source>The OPF manifest contains duplicate file paths. You should edit your OPF file's manifest to remove the duplication.</source><translation>OPF 資訊清單含有重複的檔案路徑。請編輯 OPF 檔案的資訊清單並移除重複項目。</translation></message>
+    <message>
+        <source>Error Line: %1 Column %2 - %3</source>
+        <translation>錯誤位於第 %1 行、第 %2 欄：%3</translation>
+    </message>
 </context>
 <context>
     <name>RERenamer</name>
@@ -27396,6 +27400,28 @@ Continue using the requested filename?</source>
     <message><source>Export debug log</source><translation>匯出偵錯記錄</translation></message>
     <message><source>JSON (*.json);;All files (*)</source><translation>JSON (*.json);;所有檔案 (*)</translation></message>
     <message><source>Markdown (*.md);;All files (*)</source><translation>Markdown (*.md);;所有檔案 (*)</translation></message>
+    <message>
+        <source>后台翻译已结束。以下为宿主实际结果：%1
+请接续原用户目标：按需处理失败项（最多两次），仅在用户要求时保存词表，并报告实际完成/失败数量及书籍尚未保存。written/translated 表示已存在于书中的译文，reviewed 仅表示已校正，不能将未校正的译文说成未写入；stage_failures 区分扫描和校正问题。不要重新启动已完成的全书翻译。若启动补缺或校正，它会继续在后台执行；请简短说明已启动并结束本轮回复，等待下一条宿主完成通知，不要循环查询状态。</source>
+        <translation>背景翻譯已結束。以下是宿主的實際結果：%1
+請接續原本的使用者目標：視需要處理失敗項目（最多兩次），僅在使用者要求時儲存術語表，並回報實際完成與失敗數量，以及書籍尚未儲存。written/translated 表示書中已有的譯文，reviewed 僅表示已校訂，未校訂的譯文仍可能已寫入。stage_failures 區分掃描和校訂問題。請勿重新啟動已完成的全書翻譯。若啟動補漏或校訂，工作會繼續在背景執行，請簡短說明已啟動並結束本輪回覆，等待宿主的下一則完成通知，請勿反覆查詢狀態。</translation>
+    </message>
+    <message>
+        <source>方向转换未完成，请查看校验结果。</source>
+        <translation>方向轉換未完成，請查看驗證結果。</translation>
+    </message>
+    <message>
+        <source>翻译后续处理已达到重试次数，剩余问题请通过 Agent 查询翻译状态。</source>
+        <translation>翻譯後續處理已達重試上限，剩餘問題請透過 Agent 查詢翻譯狀態。</translation>
+    </message>
+    <message>
+        <source>翻译图片适配</source>
+        <translation>調整翻譯書籍的圖片</translation>
+    </message>
+    <message>
+        <source>请先结束当前书籍事务。</source>
+        <translation>請先結束目前的書籍交易。</translation>
+    </message>
 </context>
 <context>
     <name>PluginSession</name>
@@ -27678,6 +27704,98 @@ Continue using the requested filename?</source>
     <message><source>Failure: %1 — %2</source><translation>失敗：%1 — %2</translation></message>
     <message><source>Failure: %1</source><translation>失敗：%1</translation></message>
     <message><source>Apply failed</source><translation>套用失敗</translation></message>
+    <message>
+        <source> · one batch remains</source>
+        <translation> · 剩餘 1 批</translation>
+    </message>
+    <message>
+        <source> · one terminology merge remains</source>
+        <translation> · 剩餘 1 次術語合併</translation>
+    </message>
+    <message>
+        <source> · recovering after rate limit</source>
+        <translation> · 流量限制後正在恢復並行數</translation>
+    </message>
+    <message>
+        <source> · waiting to reconnect</source>
+        <translation> · 正在等候重新連線</translation>
+    </message>
+    <message>
+        <source>%1: %v/%m</source>
+        <translation>%1：%v/%m</translation>
+    </message>
+    <message>
+        <source>Active %1 · Concurrency %2/%3 · Queued %4 · Requests %5 · Retries %6</source>
+        <translation>執行中 %1 · 並行 %2/%3 · 排隊 %4 · 請求 %5 · 重試 %6</translation>
+    </message>
+    <message>
+        <source>Background task</source>
+        <translation>背景工作</translation>
+    </message>
+    <message>
+        <source>Book translation · %1</source>
+        <translation>書籍翻譯 · %1</translation>
+    </message>
+    <message>
+        <source>Completed</source>
+        <translation>已完成</translation>
+    </message>
+    <message>
+        <source>Formatting</source>
+        <translation>整理格式</translation>
+    </message>
+    <message>
+        <source>Needs attention</source>
+        <translation>需要處理</translation>
+    </message>
+    <message>
+        <source>Organizing terminology</source>
+        <translation>整理術語</translation>
+    </message>
+    <message>
+        <source>Pause</source>
+        <translation>暫停</translation>
+    </message>
+    <message>
+        <source>Paused</source>
+        <translation>已暫停</translation>
+    </message>
+    <message>
+        <source>Ready</source>
+        <translation>已就緒</translation>
+    </message>
+    <message>
+        <source>Reconnecting… %1/%2 · waiting %3 s</source>
+        <translation>正在重新連線… %1/%2 · 等候 %3 秒</translation>
+    </message>
+    <message>
+        <source>Resume</source>
+        <translation>繼續</translation>
+    </message>
+    <message>
+        <source>Retry unfinished</source>
+        <translation>重試未完成項目</translation>
+    </message>
+    <message>
+        <source>Reviewing</source>
+        <translation>校訂中</translation>
+    </message>
+    <message>
+        <source>Scanned %1/%2 · Written %3/%2 · Reviewed %4/%2 · Issues %5 · Incomplete stages %6</source>
+        <translation>已掃描 %1/%2 · 已寫入 %3/%2 · 已校訂 %4/%2 · 問題 %5 · 未完成階段 %6</translation>
+    </message>
+    <message>
+        <source>Scanning</source>
+        <translation>掃描中</translation>
+    </message>
+    <message>
+        <source>Starting</source>
+        <translation>正在啟動</translation>
+    </message>
+    <message>
+        <source>Translating</source>
+        <translation>翻譯中</translation>
+    </message>
 </context>
 <context>
     <name>AgentSettingsWidget</name>
@@ -27735,6 +27853,50 @@ Continue using the requested filename?</source>
     <message><source>Testing Chat Completions for %1 at %2…</source><translation>正在測試 %2 上模型 %1 的 Chat Completions…</translation></message>
     <message><source>Chat Completions succeeded for %1 at %2 in %3 ms.</source><translation>%2 上模型 %1 的 Chat Completions 測試成功，耗時 %3 毫秒。</translation></message>
     <message><source>Chat Completions failed for %1 at %2: %3</source><translation>%2 上模型 %1 的 Chat Completions 測試失敗：%3</translation></message>
+    <message>
+        <source>使用 Agent 模型校正</source>
+        <translation>使用 Agent 模型校訂</translation>
+    </message>
+    <message>
+        <source>并发</source>
+        <translation>並行數</translation>
+    </message>
+    <message>
+        <source>批次目标字数</source>
+        <translation>批次目標字數</translation>
+    </message>
+    <message>
+        <source>新译文段间距</source>
+        <translation>新譯文段落間距</translation>
+    </message>
+    <message>
+        <source>沿用 Agent 思考</source>
+        <translation>沿用 Agent 思考設定</translation>
+    </message>
+    <message>
+        <source>沿用 Agent 模型</source>
+        <translation>沿用 Agent 模型</translation>
+    </message>
+    <message>
+        <source>翻译思考</source>
+        <translation>翻譯思考程度</translation>
+    </message>
+    <message>
+        <source>翻译模型</source>
+        <translation>翻譯模型</translation>
+    </message>
+    <message>
+        <source>翻译（复用上方连接）</source>
+        <translation>翻譯（共用上方連線）</translation>
+    </message>
+    <message>
+        <source>自动调整</source>
+        <translation>自動調整</translation>
+    </message>
+    <message>
+        <source>自动：优先关闭思考</source>
+        <translation>自動：優先關閉思考</translation>
+    </message>
 </context>
 <context>
     <name>CmoaParagraphNormalizer</name>
@@ -27758,6 +27920,189 @@ Continue using the requested filename?</source>
     <message>
         <source>This book contains no exportable text.</source>
         <translation>本書沒有可匯出的文字。</translation>
+    </message>
+</context>
+<context>
+    <name>BuiltinPlugins::Translation::TranslationController</name>
+    <message>
+        <source>Another book transaction is active</source>
+        <translation>另一項書籍交易正在進行</translation>
+    </message>
+    <message>
+        <source>Batch bilingual translation</source>
+        <translation>批次雙語翻譯</translation>
+    </message>
+    <message>
+        <source>Batch exceeds model context/output space; reducing batch size</source>
+        <translation>批次超出模型的上下文或輸出空間，正在縮小批次</translation>
+    </message>
+    <message>
+        <source>Before bilingual translation</source>
+        <translation>雙語翻譯前</translation>
+    </message>
+    <message>
+        <source>Before translation formatting</source>
+        <translation>整理翻譯格式前</translation>
+    </message>
+    <message>
+        <source>Book format conversion is available in the Sigil window</source>
+        <translation>可在 Sigil 視窗中轉換書籍格式</translation>
+    </message>
+    <message>
+        <source>Choose at least one stage; omit stages for the default workflow</source>
+        <translation>請至少選擇一個階段。如需預設流程，請省略 stages 參數</translation>
+    </message>
+    <message>
+        <source>Configure the Agent connection, model and API key first</source>
+        <translation>請先設定 Agent 的連線、模型和 API 金鑰</translation>
+    </message>
+    <message>
+        <source>Current book changed</source>
+        <translation>目前開啟的書籍已更換</translation>
+    </message>
+    <message>
+        <source>Finish the current book transaction first</source>
+        <translation>請先結束目前的書籍交易</translation>
+    </message>
+    <message>
+        <source>Missing/empty paragraph translations</source>
+        <translation>部分段落的譯文缺漏或為空白</translation>
+    </message>
+    <message>
+        <source>Model output truncated; reducing batch and reserving output space</source>
+        <translation>模型輸出遭截斷，正在縮小批次並保留輸出空間</translation>
+    </message>
+    <message>
+        <source>No glossary in this book</source>
+        <translation>這本書沒有術語表</translation>
+    </message>
+    <message>
+        <source>No open book</source>
+        <translation>尚未開啟書籍</translation>
+    </message>
+    <message>
+        <source>No prepared reading paragraphs</source>
+        <translation>尚未準備閱讀段落</translation>
+    </message>
+    <message>
+        <source>No translatable paragraphs in this range</source>
+        <translation>此範圍內沒有可翻譯的段落</translation>
+    </message>
+    <message>
+        <source>No translation in this book</source>
+        <translation>這本書沒有譯文</translation>
+    </message>
+    <message>
+        <source>Paragraph has no safe sentence/word boundaries; preserving source</source>
+        <translation>找不到適合切分段落的句子或詞語邊界，保留原文</translation>
+    </message>
+    <message>
+        <source>Paragraph indexes must come from this prepared scope</source>
+        <translation>請使用目前準備範圍的段落索引</translation>
+    </message>
+    <message>
+        <source>Pause/stop the current translation before preparing another range</source>
+        <translation>請先暫停或停止目前的翻譯，再準備其他範圍</translation>
+    </message>
+    <message>
+        <source>Prepare a range in the current book first</source>
+        <translation>請先在目前的書籍中準備一個範圍</translation>
+    </message>
+    <message>
+        <source>Prepare this book first</source>
+        <translation>請先準備這本書</translation>
+    </message>
+    <message>
+        <source>Reconnecting %1/%2: %3</source>
+        <translation>正在重新連線 %1/%2：%3</translation>
+    </message>
+    <message>
+        <source>Retrying smaller/failed batch %1/2: %2</source>
+        <translation>正在重試縮小後或失敗的批次 %1/2：%2</translation>
+    </message>
+    <message>
+        <source>Save translation glossary</source>
+        <translation>儲存翻譯術語表</translation>
+    </message>
+    <message>
+        <source>Select a JSON glossary in this book's Misc folder</source>
+        <translation>請在本書的 Misc 資料夾中選擇 JSON 術語表</translation>
+    </message>
+    <message>
+        <source>Select at least one prepared paragraph</source>
+        <translation>請至少選擇一個已準備的段落</translation>
+    </message>
+    <message>
+        <source>Selection requires one resource and a nonempty source range</source>
+        <translation>選取範圍必須位於單一資源中，且包含原文</translation>
+    </message>
+    <message>
+        <source>Source or translation changed; prepare this range again</source>
+        <translation>原文或譯文已變更，請重新準備此範圍</translation>
+    </message>
+    <message>
+        <source>Source or translation changed; preserving your edit</source>
+        <translation>原文或譯文已變更，保留你的編輯</translation>
+    </message>
+    <message>
+        <source>Source structure changed; prepare this resource again</source>
+        <translation>原文結構已變更，請重新準備此資源</translation>
+    </message>
+    <message>
+        <source>Stop the current run before correcting terminology</source>
+        <translation>請先停止目前的工作，再修正術語</translation>
+    </message>
+    <message>
+        <source>The current book's Misc folder is unavailable</source>
+        <translation>目前書籍的 Misc 資料夾無法使用</translation>
+    </message>
+    <message>
+        <source>Translation already running</source>
+        <translation>翻譯正在進行</translation>
+    </message>
+    <message>
+        <source>Translation session changed</source>
+        <translation>翻譯工作階段已切換</translation>
+    </message>
+    <message>
+        <source>Unknown context kind</source>
+        <translation>未知的上下文類型</translation>
+    </message>
+    <message>
+        <source>Unknown resource: %1</source>
+        <translation>未知的資源：%1</translation>
+    </message>
+    <message>
+        <source>Unknown translation stage</source>
+        <translation>未知的翻譯階段</translation>
+    </message>
+    <message>
+        <source>Unknown/unavailable translation action</source>
+        <translation>翻譯操作未知或無法執行</translation>
+    </message>
+    <message>
+        <source>Update translation glossary</source>
+        <translation>更新翻譯術語表</translation>
+    </message>
+    <message>
+        <source>Use a JSON filename without a directory</source>
+        <translation>請使用不含路徑的 JSON 檔名</translation>
+    </message>
+    <message>
+        <source>Use a nonnegative paragraph offset and positive limit</source>
+        <translation>段落位移不得為負數，數量上限必須大於零</translation>
+    </message>
+    <message>
+        <source>Use plan object, memory string or glossary array</source>
+        <translation>請使用計畫物件、記憶字串或術語陣列</translation>
+    </message>
+    <message>
+        <source>Wait for background translation to finish before saving the completed glossary</source>
+        <translation>請等待背景翻譯結束後再儲存完整術語表</translation>
+    </message>
+    <message>
+        <source>Wait for in-flight batches before formatting</source>
+        <translation>請等待處理中的批次完成後再整理格式</translation>
     </message>
 </context>
 </TS>

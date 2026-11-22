@@ -2,6 +2,8 @@
 
 Sigil-Enhanced 内置的 **Native Agent** 是当前打开书籍的 EPUB 助手。它理解这本书的结构、资源、样式、字体、Spine、目录和元数据，可以用自然语言查询、规划，并在你批准后做可撤销的修改。
 
+在对话中指定目标语言和范围，就能翻译当前书籍。默认双语对照，进度在 Agent 面板的后台任务卡显示。[内置翻译使用说明](BuiltinTranslation.md)
+
 它不是编程 Agent，也不会操作整台电脑。它不调用 MCP。需要 typed 工具表达不了的统计逻辑时，可以用只读 `python.inspect`；需要编辑时用 `python.run`。两者把 Python **snippet** 交给 Live Python v2，绑定 `plugin`（`plugin.book` / `plugin.editor`）访问当前内存 Book。这不是一份插件包，也不是旧插件那种 ZIP 快照。
 
 ## 打开方式
