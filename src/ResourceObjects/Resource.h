@@ -216,6 +216,10 @@ public:
     // external transaction has already removed the backing file.
     void FinalizeDeletionAfterFileRemoval();
 
+    // Close editors and retire the object. The owning book's workspace will
+    // remove the backing file as part of a whole-directory cleanup.
+    void RetireFromClosingBook();
+
     /**
      * Returns the resource's type.
      *

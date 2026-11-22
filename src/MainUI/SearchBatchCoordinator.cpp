@@ -16,6 +16,7 @@
 
 #include "BookManipulation/Book.h"
 #include "MainUI/MainWindow.h"
+#include "Misc/SettingsStoreExtend.h"
 #include "ResourceObjects/Resource.h"
 #include "ResourceObjects/TextResource.h"
 #include "Tabs/ContentTab.h"
@@ -46,7 +47,8 @@ SearchBatch::Result SearchBatchCoordinator::Run(
 
     const SearchBatch::Result staged = SearchBatch::Runner::Run(
         rules, snapshot.originalTexts, apply);
-    return CommitStagedResult(main_window, resources, snapshot, staged, true);
+    return CommitStagedResult(main_window, resources, snapshot, staged,
+                              SettingsStoreExtend().replaceAllCheckpoint());
 }
 
 bool SearchBatchCoordinator::CaptureSnapshot(

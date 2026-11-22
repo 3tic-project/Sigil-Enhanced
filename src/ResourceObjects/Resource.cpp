@@ -252,6 +252,11 @@ bool Resource::Delete()
 void Resource::FinalizeDeletionAfterFileRemoval()
 {
     Q_ASSERT(!QFileInfo::exists(m_FullFilePath));
+    RetireFromClosingBook();
+}
+
+void Resource::RetireFromClosingBook()
+{
     emit Deleted(this);
     // try to prevent any resource modified signals from going out
     // while we wait for delete to actually happen

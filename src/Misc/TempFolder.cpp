@@ -57,7 +57,8 @@ TempFolder::TempFolder(const QString base_path)
 TempFolder::~TempFolder()
 {
     if (m_tempDir.isValid()) {
-        TempCleanup::instance().Remove(m_tempDir.path());
+        if (m_DeferCleanup) TempCleanup::instance().RemoveInBackground(m_tempDir.path());
+        else TempCleanup::instance().Remove(m_tempDir.path());
     }
 }
 

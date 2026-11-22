@@ -1,14 +1,17 @@
 #include "EmbedPython/EmbeddedPython.h" // Python must precede Qt's slots macro.
 
 #include <QApplication>
+#include <QAbstractButton>
 #include <QCoreApplication>
 #include <QDialog>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QEvent>
+#include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
 #include <QPointer>
+#include <QMessageBox>
 #include <QTimer>
 #include <QWebEngineUrlScheme>
 
@@ -27,6 +30,8 @@
 #include "MainUI/MainWindow.h"
 #include "Misc/SettingsStore.h"
 #include "Misc/TempCleanup.h"
+#include "ResourceObjects/TextResource.h"
+#include "Widgets/AlertBox.h"
 
 namespace {
 
@@ -102,6 +107,7 @@ void ExitAfterLargeBook(QApplication &app, MainWindow *window)
     app.setQuitOnLastWindowClosed(true);
     QTimer::singleShot(500, window, [window]() { window->close(); });
     app.exec();
+    TempCleanup::instance().FinishBeforeExit();
     // The E11 background deletion was still running here, so anything that
     // ended the process during shutdown left the folder behind.
     Require(!QFileInfo::exists(root), "The working directory still existed when the event loop ended");
@@ -114,6 +120,7 @@ void ReadOnlyFolder(MainWindow *window)
     WriteFile(locked + "/payload.bin");
     Require(::chmod(QFile::encodeName(locked).constData(), 0555) == 0, "chmod failed");
     CloseWindow(window);
+    TempCleanup::instance().FinishBeforeExit();
     Require(!QFileInfo::exists(root), "A read-only folder written by a plugin kept the working directory alive");
 }
 
@@ -183,8 +190,106 @@ void PythonReleasesHolds(MainWindow *window)
 
     Require(QDir::setCurrent(root + "/OEBPS"), "Cannot re-enter the working directory");
     CloseWindow(window);
+    TempCleanup::instance().FinishBeforeExit();
     Require(!QFileInfo::exists(root), "Closing did not remove the directory Sigil was working in");
     Require(!QDir::currentPath().startsWith(canonical_root), "The working directory was not moved out");
+}
+
+void KeepOtherBookResponsive(MainWindow *closing, const QString &input)
+{
+    auto *remaining = new MainWindow(input);
+    remaining->show();
+    const QString closingRoot = WorkRoot(closing);
+    const QString remainingRoot = WorkRoot(remaining);
+    auto text = [](MainWindow *window) {
+        return qobject_cast<TextResource*>(window->GetCurrentBook()->GetFolderKeeper()
+            ->GetResourceByBookPathNoThrow("OEBPS/a.xhtml"));
+    };
+    auto* closingText = text(closing);
+    auto* remainingText = text(remaining);
+    Require(closingText && remainingText && closingRoot != remainingRoot, "Missing independent books");
+    closingText->SetText(closingText->GetText() + "\n<!-- close me -->");
+    remainingText->SetText(remainingText->GetText() + "\n<!-- keep me -->");
+    closing->GetCurrentBook()->SetModified(true);
+    remaining->GetCurrentBook()->SetModified(true);
+    ImmutableGuard guard {closingText->GetFullPath()};
+    SetImmutable(guard.path, true);
+
+    QTimer discard;
+    QObject::connect(&discard, &QTimer::timeout, [&]() {
+        auto* prompt = qobject_cast<QMessageBox*>(QApplication::activeModalWidget());
+        if (prompt && prompt->button(QMessageBox::Discard)) prompt->button(QMessageBox::Discard)->click();
+    });
+    discard.start(10);
+    QPointer<MainWindow> closed(closing);
+    Require(closing->close(), "Modified book refused to close after discarding edits");
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    discard.stop();
+    Require(closed.isNull(), "Closing the first book did not destroy its window");
+    Require(TempCleanup::instance().PendingPaths().contains(closingRoot), "Closed book cleanup was not queued");
+    const QString sibling = closingRoot + "/OEBPS/nav.xhtml";
+    Require(QFileInfo::exists(sibling),
+            "Closing synchronously deleted the book's files before handing cleanup off");
+
+    QEventLoop wait;
+    QTimer poll;
+    bool editedWhilePending = false;
+    QObject::connect(&poll, &QTimer::timeout, &wait, [&]() {
+        // Wait for a cleanup attempt that removed the other file but left the held one.
+        if (!editedWhilePending && !QFileInfo::exists(sibling) && QFileInfo::exists(guard.path)
+            && TempCleanup::instance().PendingPaths().contains(closingRoot)) {
+            remainingText->SetText(remainingText->GetText() + "\n<!-- edited while closing -->");
+            editedWhilePending = true;
+            SetImmutable(guard.path, false);
+        }
+        if (!QDir(closingRoot).exists()) wait.quit();
+    });
+    QTimer::singleShot(5000, &wait, &QEventLoop::quit);
+    poll.start(20);
+    wait.exec();
+    Require(editedWhilePending && remainingText->GetText().contains("edited while closing") &&
+            QDir(remainingRoot).exists(), "Remaining book could not be edited during cleanup");
+    Require(!QDir(closingRoot).exists(), "Background cleanup did not finish after release");
+    remaining->GetCurrentBook()->SetModified(false);
+    remaining->setWindowModified(false);
+    CloseWindow(remaining);
+    TempCleanup::instance().FinishBeforeExit();
+}
+
+void ShowOpenAlertAfterLayout(const QString &input, bool error)
+{
+    SettingsStore().setRememberWindowLayout(false);
+    const QString file = error ? QFileInfo(input).absoluteDir().filePath("invalid.epub")
+                               : input + ".warning.epub";
+    QPointer<MainWindow> window;
+    bool shown = false;
+    bool correctOwner = false;
+    bool restoredBeforeAlert = false;
+    QTimer drive;
+    QObject::connect(&drive, &QTimer::timeout, [&]() {
+        auto* alert = qobject_cast<AlertBox*>(QApplication::activeModalWidget());
+        if (!alert || !alert->isVisible()) return;
+        shown = true;
+        correctOwner = window && alert->parentWidget() == window.data() && alert->windowModality() == Qt::WindowModal;
+        restoredBeforeAlert = window && window->isVisible() && window->isMaximized();
+        if (window) window->setWindowState(Qt::WindowNoState); // Simulate a native modal demotion.
+        alert->accept();
+    });
+    drive.start(10);
+    window = new MainWindow(file);
+    Require(!shown, "Open-file alert was shown before constructing the book window");
+    window->setWindowState(Qt::WindowMaximized);
+    window->show();
+    QEventLoop loop;
+    QTimer::singleShot(1000, &loop, &QEventLoop::quit);
+    loop.exec();
+    drive.stop();
+    Require(shown && correctOwner && restoredBeforeAlert, "Open-file alert did not stay with the restored book window");
+    Require(window->isMaximized(), "Open-file alert left the book window in normal mode");
+    window->GetCurrentBook()->SetModified(false);
+    window->setWindowModified(false);
+    CloseWindow(window);
+    TempCleanup::instance().FinishBeforeExit();
 }
 
 }
@@ -214,6 +319,11 @@ int main(int argc, char **argv)
 
         SettingsStore settings;
         settings.setCleanOn(0);
+        app.setQuitOnLastWindowClosed(false);
+        if (scenario == "open-warning" || scenario == "open-error") {
+            ShowOpenAlertAfterLayout(input, scenario == "open-error");
+            return EXIT_SUCCESS;
+        }
         auto *window = new MainWindow(input);
         Require(QDir(WorkRoot(window)).exists(), "Opening EPUB did not create its working directory");
         window->show();
@@ -224,6 +334,7 @@ int main(int argc, char **argv)
         else if (scenario == "held") WaitsUntilReleased(window);
         else if (scenario == "give-up") GiveUpThenNextStart(window);
         else if (scenario == "python") PythonReleasesHolds(window);
+        else if (scenario == "two-books") KeepOtherBookResponsive(window, input);
         else throw std::runtime_error("Unknown scenario " + scenario.toStdString());
         std::cout << "Temporary cleanup scenario passed: " << scenario.toStdString() << '\n';
         return EXIT_SUCCESS;

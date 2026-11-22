@@ -11,6 +11,7 @@
 #include <functional>
 
 #include <QMutex>
+#include <QFuture>
 #include <QObject>
 #include <QStringList>
 #include <QTimer>
@@ -27,10 +28,12 @@ public:
 
     // Safe to call from any thread.
     void Remove(const QString &path);
+    void RemoveInBackground(const QString &path);
 
     QStringList PendingPaths() const;
 
-    // Called on the main thread before retrying a path that is still in use.
+    // Configure on the main thread before cleanup starts. The callback may
+    // run in the cleanup worker or during final shutdown.
     void SetHandleReleaser(std::function<void(const QString &)> releaser);
 
     // Shows a waiting dialog until pending directories are gone or the user
@@ -48,12 +51,15 @@ private:
     TempCleanup();
     bool RetryOnce(bool release_handles);
     void ScheduleRetry();
+    void RemovePendingPath(const QString &path);
     void RecordLeftovers(const QStringList &paths);
 
     mutable QMutex m_mutex;
     QStringList m_pending;
     std::function<void(const QString &)> m_releaser;
     QTimer m_timer;
+    QFuture<void> m_cleanupFuture;
+    bool m_finishing = false;
     int m_retries = 0;
 };
 

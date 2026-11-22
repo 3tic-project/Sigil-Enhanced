@@ -69,7 +69,7 @@ def verify_epub_exports(path, source, members):
 
 def run(build, test_entry='opf_resource_integration_test.cpp', build_fixture=epub_fixture,
         verify=verify_epub_exports, direct_app_executable=False,
-        run_arguments=None, run_timeout=30, expected_returncode=0):
+        run_arguments=None, run_timeout=30, expected_returncode=0, isolate_preferences=False):
     if sys.platform != 'darwin':
         raise RuntimeError('This integration runner currently supports macOS only')
     root = pathlib.Path(__file__).resolve().parents[1]
@@ -131,7 +131,11 @@ def run(build, test_entry='opf_resource_integration_test.cpp', build_fixture=epu
             environment['SIGIL_TEST_EXTERNAL_PYTHON'] = sys.executable
             environment.pop('PYTHONPATH', None)
             arguments = run_arguments if run_arguments is not None else [()]
-            for extra in arguments:
+            for index, extra in enumerate(arguments):
+                if isolate_preferences:
+                    prefs = scratch / f'prefs-{index}'
+                    (prefs / 'workspace').mkdir(parents=True)
+                    environment['SIGIL_PREFS_DIR'] = str(prefs)
                 completed = subprocess.run(
                     [executable, root, fixture, *extra],
                     env=environment,

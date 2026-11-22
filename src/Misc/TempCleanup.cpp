@@ -18,7 +18,9 @@
 #include <QPlainTextEdit>
 #include <QProgressBar>
 #include <QRegularExpression>
+#include <QScopedValueRollback>
 #include <QVBoxLayout>
+#include <QtConcurrentRun>
 
 #ifdef Q_OS_WIN
 #define NOMINMAX
@@ -124,25 +126,37 @@ TempCleanup::TempCleanup()
     connect(&m_timer, &QTimer::timeout, this, &TempCleanup::RetryPending);
 }
 
-bool TempCleanup::RemoveTree(const QString &path)
+static bool RemoveTreeFromDisk(const QString &path)
 {
     if (path.isEmpty() || !QDir(path).exists()) return true;
-    MoveWorkingDirectoryOut(path);
     if (QDir(path).removeRecursively()) return true;
     MakeTreeRemovable(path);
     QDir(path).removeRecursively();
     return !QDir(path).exists();
 }
 
+bool TempCleanup::RemoveTree(const QString &path)
+{
+    if (path.isEmpty() || !QDir(path).exists()) return true;
+    MoveWorkingDirectoryOut(path);
+    return RemoveTreeFromDisk(path);
+}
+
 void TempCleanup::Remove(const QString &path)
 {
     if (RemoveTree(path)) return;
+    qWarning() << "Temporary directory is still in use; retrying removal later:" << path;
+    RemoveInBackground(path);
+}
+
+void TempCleanup::RemoveInBackground(const QString &path)
+{
+    if (path.isEmpty()) return;
     {
         QMutexLocker locker(&m_mutex);
         if (m_pending.contains(path)) return;
         m_pending.append(path);
     }
-    qWarning() << "Temporary directory is still in use; retrying removal later:" << path;
     ScheduleRetry();
 }
 
@@ -160,7 +174,7 @@ void TempCleanup::SetHandleReleaser(std::function<void(const QString &)> release
 void TempCleanup::ScheduleRetry()
 {
     QMetaObject::invokeMethod(this, [this]() {
-        if (!m_timer.isActive()) m_timer.start();
+        if (!m_finishing && !m_timer.isActive()) m_timer.start();
     }, Qt::QueuedConnection);
 }
 
@@ -168,25 +182,48 @@ bool TempCleanup::RetryOnce(bool release_handles)
 {
     for (const QString &path : PendingPaths()) {
         if (release_handles && m_releaser) m_releaser(path);
-        if (RemoveTree(path)) {
-            QMutexLocker locker(&m_mutex);
-            m_pending.removeAll(path);
-        }
+        if (RemoveTree(path)) RemovePendingPath(path);
     }
     const bool done = PendingPaths().isEmpty();
     if (done) m_retries = 0;
     return done;
 }
 
+void TempCleanup::RemovePendingPath(const QString &path)
+{
+    QMutexLocker locker(&m_mutex);
+    m_pending.removeAll(path);
+}
+
 void TempCleanup::RetryPending()
 {
-    const bool release_handles = m_retries++ % PYTHON_RELEASE_EVERY == 0;
-    if (!RetryOnce(release_handles)) m_timer.start();
+    if (m_finishing) return;
+    if (m_cleanupFuture.isRunning()) {
+        m_timer.start();
+        return;
+    }
+    const auto paths = PendingPaths();
+    if (paths.isEmpty()) {
+        m_retries = 0;
+        return;
+    }
+    const bool releaseHandles = m_retries++ % PYTHON_RELEASE_EVERY == 1;
+    const auto releaser = releaseHandles ? m_releaser : decltype(m_releaser)();
+    for (const auto &path : paths) MoveWorkingDirectoryOut(path);
+    m_cleanupFuture = QtConcurrent::run([this, paths, releaser]() {
+        for (const auto &path : paths) {
+            if (releaser) releaser(path);
+            if (RemoveTreeFromDisk(path)) RemovePendingPath(path);
+        }
+    });
+    m_timer.start();
 }
 
 void TempCleanup::FinishBeforeExit()
 {
+    QScopedValueRollback<bool> finishing(m_finishing, true);
     m_timer.stop();
+    m_cleanupFuture.waitForFinished();
     QElapsedTimer grace;
     grace.start();
     bool release_handles = true;

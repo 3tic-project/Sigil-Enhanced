@@ -20690,6 +20690,14 @@ EPUB %2 / 言語 [%3] / ページ進行方向 %4
         <translation>オリジナルモード</translation>
     </message>
     <message>
+        <source>Create a checkpoint before batch Replace All</source>
+        <translation>一括置換の前にチェックポイントを作成する</translation>
+    </message>
+    <message>
+        <source>Applies to enhanced Replace All across files and batches of saved searches. Text undo remains available when disabled.</source>
+        <translation>拡張モードの複数ファイルの一括置換と、保存した検索の一括置換に適用されます。オフにしてもテキスト編集を元に戻せます。</translation>
+    </message>
+    <message>
         <source>Open in Other Editor Group:</source>
         <translation>他のエディターグループで開く:</translation>
     </message>

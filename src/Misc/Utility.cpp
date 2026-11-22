@@ -745,7 +745,8 @@ void Utility::DisplayExceptionErrorDialog(const QString &error_info)
 }
 
 
-void Utility::DisplayStdErrorDialog(const QString &error_message, const QString &detailed_text, QWidget* parent)
+void Utility::DisplayStdErrorDialog(const QString &error_message, const QString &detailed_text, QWidget* parent,
+                                    Qt::WindowModality modality)
 {
 #if 0
     QMessageBox message_box(parent);
@@ -763,7 +764,7 @@ void Utility::DisplayStdErrorDialog(const QString &error_message, const QString 
 #else
     // Use our own resizeable AlertBox
     AlertBox albox(parent);
-    albox.setWindowModality(Qt::ApplicationModal);
+    albox.setWindowModality(modality);
     albox.setIcon(AlertBox::Critical);
     albox.setWindowTitle("Sigil");
     albox.setText(error_message);
@@ -778,7 +779,8 @@ void Utility::DisplayStdErrorDialog(const QString &error_message, const QString 
 }
 
 
-void Utility::DisplayStdWarningDialog(const QString &warning_message, const QString &detailed_text, QWidget * parent)
+void Utility::DisplayStdWarningDialog(const QString &warning_message, const QString &detailed_text, QWidget * parent,
+                                      Qt::WindowModality modality)
 {
 #if 0
     QMessageBox message_box(parent);
@@ -796,7 +798,7 @@ void Utility::DisplayStdWarningDialog(const QString &warning_message, const QStr
 #else
     // Use our own resizeable AlertBox
     AlertBox albox(parent);
-    albox.setWindowModality(Qt::ApplicationModal);
+    albox.setWindowModality(modality);
     albox.setIcon(AlertBox::Warning);
     albox.setWindowTitle("Sigil");
     albox.setText(warning_message);

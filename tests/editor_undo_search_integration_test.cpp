@@ -1,8 +1,12 @@
 #include "EmbedPython/EmbeddedPython.h" // Python must precede Qt's slots macro.
 
 #include <QAction>
+#include <QCheckBox>
 #include <QComboBox>
+#include <QDir>
 #include <QFile>
+#include <QLineEdit>
+#include <QKeyEvent>
 #include <QMessageBox>
 #include <QResource>
 #include <QTextCursor>
@@ -17,10 +21,12 @@
 
 #include "BookManipulation/Book.h"
 #include "BookManipulation/FolderKeeper.h"
+#include "Dialogs/PreferenceWidgets/ModifiedVerPrefsWidget.h"
 #include "MainUI/FindReplace.h"
 #include "MainUI/FindReplacePlus.h"
 #include "MainUI/MainApplication.h"
 #include "MainUI/MainWindow.h"
+#include "MainUI/SearchBatchCoordinator.h"
 #include "Misc/SettingsStore.h"
 #include "Misc/SettingsStoreExtend.h"
 #include "ResourceObjects/TextResource.h"
@@ -118,6 +124,86 @@ void setCombo(QWidget* widget, const char* name, int data)
     auto* combo = widget->findChild<QComboBox*>(name);
     require(combo && combo->findData(data) >= 0, QString("Search control %1 is missing").arg(name));
     combo->setCurrentIndex(combo->findData(data));
+}
+
+void searchFocus(MainWindow& window, bool plus)
+{
+    window.showNormal();
+    QApplication::setActiveWindow(&window);
+    QWidget* search = plus ? static_cast<QWidget*>(window.findChild<FindReplacePlus*>())
+                           : static_cast<QWidget*>(window.findChild<FindReplace*>());
+    require(search, "Missing search panel");
+    search->show();
+    auto* find = search->findChild<QComboBox*>("cbFind");
+    auto* button = search->findChild<QToolButton*>("findNext");
+    require(find && button, "Missing find input or button");
+    auto* first = open(window, "OEBPS/a.xhtml");
+    for (bool acrossFiles : {false, true}) {
+        editor(window)->ScrollToPosition(0);
+        setCombo(search, "cbLookWhere", acrossFiles ? 1 : 0);
+        setCombo(search, "cbSearchDirection", plus ? int(FindReplacePlus::Direction_Down)
+                                                   : int(FindReplace::SearchDirection_Down));
+        const QString term = acrossFiles ? "needle four" : "needle one";
+        find->setEditText(term);
+        button->setFocusPolicy(Qt::StrongFocus);
+        button->setFocus();
+        require(QApplication::focusWidget() == button, "Search button did not receive keyboard focus");
+        button->click();
+        auto* code = editor(window);
+        auto* target = qobject_cast<TextResource*>(window.GetCurrentContentTab()->GetLoadedResource());
+        require(target && (target != first) == acrossFiles && code->textCursor().selectedText() == term,
+                "Search did not select the expected text");
+        require(QApplication::focusWidget() == code, "Match was selected but Code View did not receive focus");
+        QKeyEvent typed(QEvent::KeyPress, Qt::Key_X, Qt::NoModifier, "x");
+        QApplication::sendEvent(QApplication::focusWidget(), &typed);
+        require(!target->GetText().contains(term), "Typing did not edit the selected match");
+        code->undo();
+        require(target->GetText().contains(term), "Cannot undo typing over a search match");
+    }
+}
+
+void replaceCheckpoint(MainWindow& window, bool enabled, bool savedSearch)
+{
+    require(SettingsStoreExtend().replaceAllCheckpoint(), "Checkpoints must be enabled by default");
+    ModifiedVerPrefsWidget preferences;
+    auto* checkbox = preferences.findChild<QCheckBox*>("cbReplaceAllCheckpoint");
+    require(checkbox && checkbox->isChecked(), "Preferences must show the default checkpoint policy");
+    checkbox->setChecked(enabled);
+    preferences.saveSettings();
+    require(SettingsStoreExtend().replaceAllCheckpoint() == enabled, "Checkpoint preference was not saved");
+    auto* first = open(window, "OEBPS/a.xhtml");
+    const QString before = first->GetText();
+    const QString repo = Utility::DefinePrefsDir() + "/repo";
+    require(!QDir(repo).exists(), "Fixture already contains a checkpoint repository");
+    if (savedSearch) {
+        SearchBatch::Rule rule;
+        rule.resourcePaths = {first->GetRelativePath()};
+        const auto result = SearchBatchCoordinator::Run(&window, {rule},
+            {{first->GetRelativePath(), first}}, [](const auto&, const auto&, const QString &text) {
+                QString changed = text;
+                changed.replace("needle one", "changed one");
+                return SearchBatch::ApplyResult {true, changed, 1, {}};
+            });
+        require(result.success && result.replacementCount == 1, "Saved search batch failed");
+    } else {
+        auto* search = window.findChild<FindReplacePlus*>();
+        require(search, "Missing enhanced search panel");
+        setCombo(search, "cbLookWhere", FindReplacePlus::LookWhere_AllHTMLFiles);
+        setCombo(search, "cbSearchDirection", FindReplacePlus::Direction_Down);
+        auto* find = search->findChild<QComboBox*>("cbFind");
+        search->findChild<QComboBox*>("cbReplace")->setEditText("changed one");
+        int count = -1;
+        find->setEditText("missing needle not in this book");
+        require(QMetaObject::invokeMethod(search, "ReplaceAll", Qt::DirectConnection, Q_RETURN_ARG(int, count))
+                && count == 0 && !QDir(repo).exists(), "No-op Replace All created a checkpoint");
+        find->setEditText("needle one");
+        require(QMetaObject::invokeMethod(search, "ReplaceAll", Qt::DirectConnection, Q_RETURN_ARG(int, count))
+                && count == 1, "Enhanced Replace All failed");
+    }
+    require(first->GetText().contains("changed one"), "Replacement did not reach the resource");
+    require(QDir(repo).exists() == enabled, "Checkpoint creation did not follow the preference");
+    first->GetTextDocumentForWriting().undo();
+    require(first->GetText() == before, "Batch replacement did not preserve editor undo");
 }
 
 void restartSearch(MainWindow& window, bool plus, bool presearch)
@@ -238,9 +324,12 @@ int main(int argc, char** argv)
         SettingsStore settings;
         settings.setCleanOn(0);
         settings.setPreserveOPFSource(true);
-        SettingsStoreExtend().setFindReplaceEnhancedMode(scenario.startsWith("restart-plus"));
+        const bool plus = scenario.contains("plus") || scenario.startsWith("checkpoint-");
+        SettingsStoreExtend().setFindReplaceEnhancedMode(plus);
         MainWindow window(input);
         if (scenario.startsWith("redo-")) undoRedoSave(window, scenario == "redo-css");
+        else if (scenario.startsWith("focus-")) searchFocus(window, plus);
+        else if (scenario.startsWith("checkpoint-")) replaceCheckpoint(window, scenario.endsWith("on"), scenario.contains("saved"));
         else restartSearch(window, scenario.startsWith("restart-plus"), scenario.endsWith("presearch"));
         std::cout << "Editor undo/search integration passed: " << scenario.toStdString() << '\n';
         return EXIT_SUCCESS;

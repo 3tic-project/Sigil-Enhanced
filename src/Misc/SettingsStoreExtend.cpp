@@ -143,6 +143,16 @@ bool SettingsStoreExtend::getFindReplaceEnhancedMode() {
     return isEnhancedMode;
 }
 
+void SettingsStoreExtend::setReplaceAllCheckpoint(bool enabled)
+{
+    setValue(QStringLiteral("user_preferences/replace_all_checkpoint"), enabled);
+}
+
+bool SettingsStoreExtend::replaceAllCheckpoint() const
+{
+    return value(QStringLiteral("user_preferences/replace_all_checkpoint"), true).toBool();
+}
+
 void SettingsStoreExtend::setOtherGroupTarget(const QString &target)
 {
     setValue("editorGroups/otherGroupTarget", target);

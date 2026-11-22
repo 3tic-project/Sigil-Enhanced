@@ -29,6 +29,8 @@ public:
     bool getIgnoreBlankLine();
     void setFindReplaceEnhancedMode(bool isEnhancedMode);
     bool getFindReplaceEnhancedMode();
+    void setReplaceAllCheckpoint(bool enabled);
+    bool replaceAllCheckpoint() const;
     void setOtherGroupTarget(const QString &target);
     QString getOtherGroupTarget();
     void setDivParagraphConvertBlankLines(bool enabled);

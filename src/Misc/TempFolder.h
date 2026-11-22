@@ -49,6 +49,7 @@ public:
      * when something still holds it open.
      */
     ~TempFolder();
+    void DeferCleanup() { m_DeferCleanup = true; }
 
     /**
      * Returns the full path to the temp folder. No trailing slash
@@ -89,6 +90,7 @@ private:
      * The full path to the temp folder.
      */
     QTemporaryDir m_tempDir;
+    bool m_DeferCleanup = false;
 };
 
 

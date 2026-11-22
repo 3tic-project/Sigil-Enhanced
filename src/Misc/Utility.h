@@ -182,9 +182,11 @@ public:
      */
     static QString URLDecodePath(const QString &path);
 
-    static void DisplayStdErrorDialog(const QString &error_message, const QString &detailed_text = QString(), QWidget* parent = nullptr);
+    static void DisplayStdErrorDialog(const QString &error_message, const QString &detailed_text = QString(), QWidget* parent = nullptr,
+                                      Qt::WindowModality modality = Qt::ApplicationModal);
 
-    static void DisplayStdWarningDialog(const QString &warning_message, const QString &detailed_text = QString(), QWidget* parent = nullptr);
+    static void DisplayStdWarningDialog(const QString &warning_message, const QString &detailed_text = QString(), QWidget* parent = nullptr,
+                                        Qt::WindowModality modality = Qt::ApplicationModal);
 
     static void DisplayExceptionErrorDialog(const QString &error_info);
 

@@ -35,8 +35,8 @@ public:
 
     // GUI-thread boundary: conflict check, an optional checkpoint, then one
     // undoable write per changed resource. The staged result is never
-    // recomputed here. Callers other than the interactive Regex Workbench keep
-    // the safe default and always create a checkpoint.
+    // recomputed here. The checkpoint defaults to enabled. Saved searches
+    // and the interactive Regex Workbench pass their respective preferences.
     static SearchBatch::Result CommitStagedResult(
         MainWindow* main_window,
         const QHash<QString, TextResource*>& resources,

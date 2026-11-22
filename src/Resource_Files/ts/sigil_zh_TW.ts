@@ -20686,6 +20686,14 @@ EPUB %2 / 語言 [%3] / 閱讀方向 %4
         <translation>原始模式</translation>
     </message>
     <message>
+        <source>Create a checkpoint before batch Replace All</source>
+        <translation>批次全部取代前建立檢查點</translation>
+    </message>
+    <message>
+        <source>Applies to enhanced Replace All across files and batches of saved searches. Text undo remains available when disabled.</source>
+        <translation>適用於增強模式的跨檔案全部取代，以及已儲存搜尋的批次取代。關閉後仍可復原文字修改。</translation>
+    </message>
+    <message>
         <source>Open in Other Editor Group:</source>
         <translation>在另一個編輯器群組中開啟：</translation>
     </message>

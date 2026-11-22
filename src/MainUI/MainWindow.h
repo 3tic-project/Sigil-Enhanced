@@ -809,6 +809,7 @@ private:
      * @param new_book The new book for editing.
      */
     void SetNewBook(QSharedPointer<Book> new_book);
+    void ReportOpenFileError(const QString &message, const QString &details = QString());
 
     /**
      * Creates a new, empty book and replaces
@@ -983,6 +984,7 @@ private:
      * after the UI main window is visible.
      */
     QStringList m_LastOpenFileWarnings;
+    QList<QPair<QString, QString>> m_LastOpenFileErrors;
     bool m_IsInitialLoad;
 
     QByteArray m_LastState;

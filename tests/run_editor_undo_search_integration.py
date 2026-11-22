@@ -7,7 +7,9 @@ import zipfile
 from run_opf_resource_integration import epub_fixture, run
 
 
-SCENARIOS = ("redo-html", "redo-css", "restart-original", "restart-plus", "restart-plus-presearch")
+SCENARIOS = ("redo-html", "redo-css", "restart-original", "restart-plus", "restart-plus-presearch",
+             "focus-original", "focus-plus", "checkpoint-off", "checkpoint-on",
+             "checkpoint-saved-off", "checkpoint-saved-on")
 
 
 def fixture(scratch):
@@ -50,4 +52,5 @@ if __name__ == "__main__":
             print("Redone content persisted in EPUB:", scenario)
 
     run(args.build.resolve(), "editor_undo_search_integration_test.cpp", fixture, verify,
-        direct_app_executable=True, run_arguments=[(scenario,) for scenario in scenarios])
+        direct_app_executable=True, run_arguments=[(scenario,) for scenario in scenarios],
+        isolate_preferences=True)

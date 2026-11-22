@@ -207,6 +207,7 @@ public:
      * @return The full path.
      */
     QString GetFullPathToMainFolder() const;
+    void DeferWorkspaceCleanup();
 
     /**
      * Returns a list of all the resource filenames in the book.
@@ -359,6 +360,7 @@ private:
      * The main temp folder where files are stored.
      */
     TempFolder m_TempFolder;
+    bool m_DeferWorkspaceCleanup = false;
 
     /**
      * Watches the files on disk for any changes in case the resources have been modified from outside Sigil.

@@ -24,6 +24,7 @@
 *************************************************************************/
 
 #include <memory>
+#include <utility>
 
 #include <QDir>
 #include <QFile>
@@ -2225,8 +2226,14 @@ void MainWindow::ShowLastOpenFileWarnings()
 {
     if (m_inShowLastOpenWarnings) return;
     m_inShowLastOpenWarnings = true;
-    if (!m_LastOpenFileWarnings.isEmpty()) {
-        foreach(QString info, m_LastOpenFileWarnings) {
+    const auto errors = std::exchange(m_LastOpenFileErrors, {});
+    const auto warnings = std::exchange(m_LastOpenFileWarnings, {});
+    const Qt::WindowStates displayMode = windowState() & (Qt::WindowMaximized | Qt::WindowFullScreen);
+    for (const auto &error : errors) {
+        Utility::DisplayStdErrorDialog(error.first, error.second, this, Qt::WindowModal);
+    }
+    if (!warnings.isEmpty()) {
+        foreach(QString info, warnings) {
             QString msg;
             QString details;
             if (!info.isEmpty()) {
@@ -2241,17 +2248,23 @@ void MainWindow::ShowLastOpenFileWarnings()
                 Utility::DisplayStdWarningDialog(
                 "<p><b>" %
                 tr("Warning: ") % msg %
-                "</b><p>", details, this);
+                "</b><p>", details, this, Qt::WindowModal);
             }
         }
-        m_LastOpenFileWarnings.clear();
+    }
+    if (displayMode && !(windowState() & (Qt::WindowMaximized | Qt::WindowFullScreen))) {
+        setWindowState(windowState() | displayMode);
     }
     m_inShowLastOpenWarnings = false;
 }
 
+void MainWindow::ReportOpenFileError(const QString &message, const QString &details)
+{
+    m_LastOpenFileErrors.append({message, details});
+    if (!m_IsInitialLoad) ShowLastOpenFileWarnings();
+}
 void MainWindow::showEvent(QShowEvent *event)
 {
-    m_IsInitialLoad = false;
     QMainWindow::showEvent(event);
     if (!m_WindowLayoutRestoreScheduled) {
         m_WindowLayoutRestoreScheduled = true;
@@ -2266,6 +2279,8 @@ void MainWindow::showEvent(QShowEvent *event)
                 restoreState(m_LastState);
                 m_LastState.clear();
             }
+            m_IsInitialLoad = false;
+            ShowLastOpenFileWarnings();
         });
     }
 }
@@ -2378,6 +2393,10 @@ void MainWindow::closeEvent(QCloseEvent *event)
     if (MaybeSaveDialogSaysProceed()) {
 
         DBG qDebug() << "in close event after maybe save";
+
+        // Retire widgets here and remove the extracted files in one pass.
+        // Application shutdown drains pending cleanup after the last window.
+        if (m_Book) m_Book->GetFolderKeeper()->DeferWorkspaceCleanup();
 
 #ifdef Q_OS_MAC
         // since we are closing this window, disconnect signals that might be invoked
@@ -6902,7 +6921,7 @@ bool MainWindow::LoadFile(const QString &fullfilepath, bool is_internal,
 
         if (error.line != -1) {
             // Warn the user their content is invalid.
-            Utility::DisplayStdErrorDialog(tr("The following file was not loaded due to invalid content or not well formed XML:\n\n%1 (line %2: %3)\n\nTry setting the Clean Source preference to Mend XHTML Source Code on Open and reloading the file.")
+            ReportOpenFileError(tr("The following file was not loaded due to invalid content or not well formed XML:\n\n%1 (line %2: %3)\n\nTry setting the Clean Source preference to Mend XHTML Source Code on Open and reloading the file.")
                                            .arg(QDir::toNativeSeparators(fullfilepath))
                                            .arg(error.line)
                                            .arg(error.message));
@@ -6928,9 +6947,6 @@ bool MainWindow::LoadFile(const QString &fullfilepath, bool is_internal,
             // Get any warnings - if our main window is not currently visible they will be
             // shown when the window is displayed.
             m_LastOpenFileWarnings.append(importer->GetLoadWarnings());
-            if (!m_IsInitialLoad) {
-                ShowLastOpenFileWarnings();
-            }
             if (!is_internal) {
                 // Store the folder the user opened from
                 m_LastFolderOpen = QFileInfo(fullfilepath).absolutePath();
@@ -6949,13 +6965,14 @@ bool MainWindow::LoadFile(const QString &fullfilepath, bool is_internal,
                 m_Book->SetModified();
             }
 
+            if (!m_IsInitialLoad) ShowLastOpenFileWarnings();
             return true;
         }
    } catch (FileEncryptedWithDrm&) {
        ShowMessageOnStatusBar();
        QApplication::restoreOverrideCursor();
        if (!preserve_current_on_error) CreateNewBook();
-       Utility::DisplayStdErrorDialog(
+       ReportOpenFileError(
            tr("The creator of this file has encrypted it with DRM. "
               "%1 cannot open such files.").arg(APP_DISPLAY_NAME));
    } catch (EPUBLoadParseError& epub_load_error) {
@@ -6963,20 +6980,20 @@ bool MainWindow::LoadFile(const QString &fullfilepath, bool is_internal,
        QApplication::restoreOverrideCursor();
        if (!preserve_current_on_error) CreateNewBook();
        const QString errors = QString(epub_load_error.what());
-       Utility::DisplayStdErrorDialog(
+       ReportOpenFileError(
            tr("Cannot load EPUB: %1").arg(QDir::toNativeSeparators(fullfilepath)), errors);
    } catch (const std::runtime_error &e) {
        ShowMessageOnStatusBar();
        QApplication::restoreOverrideCursor();
        if (!preserve_current_on_error) CreateNewBook();
-       Utility::DisplayExceptionErrorDialog(tr("Cannot load file %1: %2")
+       ReportOpenFileError(tr("Cannot load file %1: %2")
                                              .arg(QDir::toNativeSeparators(fullfilepath))
                                              .arg(e.what()));
    } catch (QString& err) {
        ShowMessageOnStatusBar();
        QApplication::restoreOverrideCursor();
        if (!preserve_current_on_error) CreateNewBook();
-       Utility::DisplayStdErrorDialog(err);
+       ReportOpenFileError(err);
     }
     // If we got to here some sort of error occurred while loading the file
     // and potentially has left the GUI in a nasty state (like on initial startup)
@@ -8106,10 +8123,6 @@ void MainWindow::changeEvent(QEvent *e)
                     }
                 }
 
-            }
-            // moved here from showEvent to make sure it comes after state restoration
-            if (m_FirstTime && !m_LastOpenFileWarnings.isEmpty()) {
-                QTimer::singleShot(0, this, SLOT(ShowLastOpenFileWarnings()));
             }
             m_FirstTime = false;
 

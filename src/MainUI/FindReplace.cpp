@@ -940,7 +940,9 @@ bool FindReplace::FindText(Searchable::Direction direction)
     }
 
     UpdatePreviousFindStrings();
-    // RestoreFRFocusIfNeeded(had_focus);
+    if (found) {
+        if (ContentTab *tab = m_MainWindow->GetCurrentContentTab()) tab->setFocus(Qt::OtherFocusReason);
+    }
     return found;
 }
 

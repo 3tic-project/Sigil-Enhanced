@@ -98,8 +98,15 @@ FolderKeeper::~FolderKeeper()
         // removal (and there's no point to that, FolderKeeper is dying).
         // Disconnecting this speeds up FolderKeeper destruction.
         disconnect(resource, SIGNAL(Deleted(const Resource *)), this, SLOT(RemoveResource(const Resource *)));
-        resource->Delete();
+        if (m_DeferWorkspaceCleanup) resource->RetireFromClosingBook();
+        else resource->Delete();
     }
+}
+
+void FolderKeeper::DeferWorkspaceCleanup()
+{
+    m_DeferWorkspaceCleanup = true;
+    m_TempFolder.DeferCleanup();
 }
 
 QString FolderKeeper::DetermineFileGroup(const QString &filepath, const QString &mimetype)

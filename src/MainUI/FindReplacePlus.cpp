@@ -776,6 +776,9 @@ bool FindReplacePlus::FindText(Direction direction)
     UpdatePreviousPreFindStrings();
     UpdatePreviousFindStrings();
 
+    if (found) {
+        if (ContentTab *tab = m_MainWindow->GetCurrentContentTab()) tab->setFocus(Qt::OtherFocusReason);
+    }
     return found;
 }
 
@@ -1005,19 +1008,19 @@ int FindReplacePlus::ReplaceInAllFiles()
     QList<Resource *> plain_files;
     SplitByTextOnly(search_files, text_only_files, plain_files);
     const QString replacement = ui.cbReplace->lineEdit()->text();
-    int pending_count = 0;
-    if (!text_only_files.isEmpty()) {
-        pending_count += SearchOperations::CountInFilesPlus(GetPreSearchRegex(), BuildSearchRegex(true), text_only_files);
-    }
-    if (!plain_files.isEmpty()) {
-        pending_count += SearchOperations::CountInFilesPlus(GetPreSearchRegex(), BuildSearchRegex(false), plain_files);
-    }
-    if (pending_count == 0) return 0;
+    if (SettingsStoreExtend().replaceAllCheckpoint()) {
+        const bool hasMatches =
+            (!text_only_files.isEmpty() && SearchOperations::CountInFilesPlus(
+                GetPreSearchRegex(), BuildSearchRegex(true), text_only_files) > 0)
+            || (!plain_files.isEmpty() && SearchOperations::CountInFilesPlus(
+                GetPreSearchRegex(), BuildSearchRegex(false), plain_files) > 0);
+        if (!hasMatches) return 0;
 
-    ShowMessage(tr("Creating checkpoint before Replace All..."));
-    if (!m_MainWindow->RepoCommit()) {
-        ShowMessage(tr("Replace All cancelled: checkpoint failed."));
-        return -1;
+        ShowMessage(tr("Creating checkpoint before Replace All..."));
+        if (!m_MainWindow->CreateRecoveryCheckpoint(true)) {
+            ShowMessage(tr("Replace All cancelled: checkpoint failed."));
+            return -1;
+        }
     }
 
     int count = 0;
