@@ -1,4 +1,4 @@
-Sigil-Enhanced-2.8.6.E15
+Sigil-Enhanced-2.8.6.E16
    New Features
      - Added bilingual translation to the native Agent. It edits the current book in batches and
        can scan, organize terminology, translate, review, or format an entire book or a smaller range.
@@ -33,6 +33,8 @@ Sigil-Enhanced-2.8.6.E15
        count and replacement without open editor tabs in both search modes.
      - Guarded loading waits, Chinese-conversion dialogs and queued editor initialization against
        closed tabs or destroyed resources, with empty metadata for destroyed resources.
+     - Preserved numeric references and the five predefined XML entities when the native XML
+       processor rewrites EPUB metadata, NCX, page maps, or SMIL.
      - Fixed Agent transcript following after streaming and tool cards change the layout, and
        stopped background resource updates from activating another book window.
 
@@ -42,6 +44,7 @@ Sigil-Enhanced-2.8.6.E15
        non-basic named entities are disabled.
 
    Build/Testing
+     - Cancelled the E15 package run during verification and issued the verified release as E16.
      - Completed Simplified Chinese, Traditional Chinese, and Japanese catalogs for the new Agent
        translation UI and messages.
      - Added native Agent translation, checkpoint, search focus, book closing, lock reentrancy, and

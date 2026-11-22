@@ -18,9 +18,9 @@ Sigil-Enhanced 基于 Sigil 最新版本以及早先的 sigil-modified@ichigo250
 
 ## 版本
 
-当前版本是 2.8.6E15。安装包和 SHA-256 校验文件见 [GitHub Releases](https://github.com/3tic-project/Sigil-Enhanced/releases)。
+当前版本是 2.8.6E16。安装包和 SHA-256 校验文件见 [GitHub Releases](https://github.com/3tic-project/Sigil-Enhanced/releases)。
 
-本版改动见 [2.8.6E15 更新说明](docs/ReleaseNotes-2.8.6E15.md)，上一版见 [2.8.6E14 更新说明](docs/ReleaseNotes-2.8.6E14.md)，更早的记录见 [ChangeLog.txt](ChangeLog.txt)。
+本版改动见 [2.8.6E16 更新说明](docs/ReleaseNotes-2.8.6E16.md)，上一版见 [2.8.6E14 更新说明](docs/ReleaseNotes-2.8.6E14.md)，更早的记录见 [ChangeLog.txt](ChangeLog.txt)。
 
 ## 增强的功能
 

@@ -588,7 +588,7 @@ QString QuotedAttribute(QString value)
     return '"' + value + '"';
 }
 
-// element.py IS_ENTITY pass: only the three base XML entities survive.
+// Match element.py: preserve numeric references and the five predefined XML entities.
 Text EscapeNonBaseEntities(const Text &text)
 {
     Text result;
@@ -598,30 +598,21 @@ Text EscapeNonBaseEntities(const Text &text)
             result += text[index++];
             continue;
         }
-        std::size_t end = 0;
-        std::size_t cursor = index + 1;
-        if (cursor < text.size() && text[cursor] == U'#') {
-            std::size_t digits = cursor + 1;
-            while (digits < text.size() && ReplaceFunctions::IsPythonDigit(text[digits])) ++digits;
-            if (digits > cursor + 1 && digits < text.size() && text[digits] == U';') end = digits + 1;
-            if (!end && cursor + 1 < text.size() && text[cursor + 1] == U'x') {
-                std::size_t hex = cursor + 2;
-                while (hex < text.size() && IsAsciiHex(text[hex])) ++hex;
-                if (hex > cursor + 2 && hex < text.size() && text[hex] == U';') end = hex + 1;
-            }
-        }
-        if (!end) {
-            std::size_t word = cursor;
-            while (word < text.size() && ReplaceFunctions::IsPythonWord(text[word])) ++word;
-            if (word > cursor && word < text.size() && text[word] == U';') end = word + 1;
-        }
-        if (!end) {
+        const std::size_t start = index + 1;
+        std::size_t end = start;
+        while (end < text.size() && ReplaceFunctions::IsPythonWord(text[end])) ++end;
+        if (end == start || end == text.size() || text[end] != U';') {
             result += text[index++];
             continue;
         }
-        const Text piece = text.substr(index, end - index);
-        result += piece == U"&lt;" || piece == U"&gt;" || piece == U"&amp;" ? piece : U"&amp;" + piece.substr(1);
-        index = end;
+        const Text piece = text.substr(index, end - index + 1);
+        if (piece == U"&lt;" || piece == U"&gt;" || piece == U"&amp;"
+            || piece == U"&apos;" || piece == U"&quot;") {
+            result += piece;
+        } else {
+            result += U"&amp;" + piece.substr(1);
+        }
+        index = end + 1;
     }
     return result;
 }
